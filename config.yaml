@@ -1,0 +1,40 @@
+commands:
+  - command: powershell.exe -Command "Get-WmiObject -Class Win32_Process -Locale MS_409 -ErrorAction SilentlyContinue | Select * | Export-Csv -Path '$FILENAME$' -NoTypeInformation"
+    file_name: $time$_processes.csv
+    merge: true
+  - command: powershell.exe -Command "Get-WmiObject -Class Win32_Service -Locale MS_409 -ErrorAction SilentlyContinue | Select * | Export-Csv -Path '$FILENAME$' -NoTypeInformation"
+    file_name: $time$_services.csv
+    merge: true
+  - command: powershell.exe -Command "Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* -ErrorAction SilentlyContinue | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},* | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
+    file_name: $time$_products.csv
+    merge: true
+  - command: powershell.exe -Command "Get-WmiObject -Class Win32_Startup -Locale MS_409 -ErrorAction SilentlyContinue | Select * | Export-Csv -Path '$FILENAME$' -NoTypeInformation"
+    file_name: $time$_startups.csv
+    merge: true
+  - command: powershell.exe -Command "Get-WmiObject -Namespace 'root\StandardCimv2' -Class 'MSFT_NetTCPConnection' -Locale MS_409 -ErrorAction SilentlyContinue | Select * | Export-Csv -Path '$FILENAME$' -NoTypeInformation"
+    file_name: $time$_connections.csv
+    merge: true
+  - command: powershell.exe -Command "Get-WmiObject -Class Win32_Task -Locale MS_409 -ErrorAction SilentlyContinue | Select * | Export-Csv -Path '$FILENAME$' -NoTypeInformation"
+    file_name: $time$_tasks.csv
+    merge: true
+  - command: powershell.exe -Command "Get-WmiObject -Namespace 'root\Microsoft\Windows\SMB' -Class MSFT_SmbShare -Locale MS_409 -ErrorAction SilentlyContinue | Select * | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
+    file_name: $time$_shares.csv
+    merge: true
+  - command: powershell.exe -Command "Get-WmiObject -Namespace 'root/StandardCimv2' -Class 'MSFT_DNSClientCache' -Locale MS_409 -ErrorAction SilentlyContinue | Select PSComputerName,Caption,Data,DataLength,Description,ElementName,Entry,InstanceID,Name,Section,Status,TimeToLive,Type,Qualifiers,Site,Container | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
+    file_name: $time$_dns_cache.csv
+    merge: true
+  - command: powershell.exe -Command "Get-HotFix -ErrorAction SilentlyContinue | Select * | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
+    file_name: $time$_patches.csv
+    merge: true
+  - command: powershell.exe -Command "quser 2>&1 | ForEach-Object -Process { $_ -replace '\s{2,}',',' } | ConvertFrom-Csv | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},* | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
+    file_name: $time$_quser.csv
+    merge: true
+  - command: powershell.exe -Command "Get-ComputerInfo -ErrorAction SilentlyContinue | Select * | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
+    file_name: $time$_systeminfo.csv
+    merge: true
+  - command: powershell.exe -Command "Get-NetFirewallRule -ErrorAction SilentlyContinue | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},* | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
+    file_name: $time$_firewall_rules.csv
+    merge: true
+  - command: powershell.exe -Command "Get-NetNeighbor -ErrorAction SilentlyContinue | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},* | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
+    file_name: $time$_arp_cache.csv
+    merge: true

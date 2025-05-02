@@ -15,3 +15,8 @@ commands:
     file_name: $time$_myscript.csv
     merge: csv
     id: myscript
+  # Example arbitrary PowerShell command
+  - command: powershell.exe -Command "Get-Process | Select-Object -Property Name,Id,Path" | Export-Csv -Path $FILENAME$ -NoTypeInformation
+    file_name: $time$_myscript.csv
+    merge: csv
+    id: myscript

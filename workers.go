@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -89,18 +90,31 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 			ResultsCollected:  false,
 		}
 
+		filesCopiedToTarget := make([]string, 0)
+
 		// We won't establish explicit SMB connection because we are on the domain running with appropriate authentication
 		// Process can negotiate on our behalf transparently assuming we have permissions and the share is available
 		// Deploy auxiliary files (scripts, binaries, etc) specified in config.yaml
 		for _, v := range filesToCopy {
-			targetPath := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, v)
+			targetPath := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, filepath.Base(v))
 			// Copy v to targetPath
-			_, err := copyFile(v, targetPath)
+			err := copyFile(v, targetPath)
 			if err != nil {
 				log.Printf("Error copying file %s to %s: %v", v, targetPath, err)
 				continue
 			}
+			filesCopiedToTarget = append(filesCopiedToTarget, targetPath)
 		}
+		// Deploy required directories
+		for _, v := range dirsToCopy {
+			targetPath := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, v)
+			err := copyDirectory(v, targetPath)
+			if err != nil {
+				log.Printf("Error copying directory %s to %s: %v", v, targetPath, err)
+				continue
+			}
+		}
+
 		// Deploy Batch
 		batchFile := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s_omni.bat", target, currentTime)
 		err := os.WriteFile(batchFile, batchBytes, 0644)
@@ -108,6 +122,7 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 			log.Printf("Error writing batch file to %s: %v", target, err)
 			continue
 		}
+		filesCopiedToTarget = append(filesCopiedToTarget, batchFile)
 		computerReport.FilesCopied = true
 		// Execute Batch
 		err = executeRemoteWMI(target, fmt.Sprintf("cmd.exe /c %s", batchFile), "C:\\Windows\\temp", "", "", "")
@@ -145,32 +160,43 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 						log.Printf("Error deleting batch file %s on %s: %v", batchFile, target, err)
 					}
 
-					// Collect and Delete Files
+					// Delete Copied Directories
+					for _, v := range dirsToCopy {
+						tmp := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, v)
+						err = os.RemoveAll(tmp)
+						if err != nil {
+							log.Printf("Error deleting directory %s: %v", tmp, err)
+							continue
+						}
+					}
+
+					// Delete Copied Files
+					for _, v := range filesCopiedToTarget {
+						err = os.Remove(v)
+						if err != nil {
+							log.Printf("Error deleting file %s: %v", v, err)
+							continue
+						}
+					}
+
+					// Collect and Delete Output Files
 					collectionFolder := fmt.Sprintf("devices\\%s", target)
 					err = os.MkdirAll(collectionFolder, os.ModePerm)
 					if err != nil {
 						log.Printf("Error creating collection folder %s: %v", collectionFolder, err)
 						reportChan <- computerReport
+						cancel()
 						continue
-					}
-					for _, v := range filesToCopy {
-						tmp := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, v)
-						err = os.Remove(tmp)
-						if err != nil {
-							log.Printf("Error deleting file %s: %v", tmp, err)
-							continue
-						}
 					}
 
 					for _, v := range collectionFiles {
 						collectionFile := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, v)
 						destinationFile := fmt.Sprintf("%s\\%s", collectionFolder, v)
-						_, err = copyFile(collectionFile, destinationFile)
+						err = copyFile(collectionFile, destinationFile)
 						if err != nil {
 							log.Printf("Error copying file %s to %s: %v", collectionFile, destinationFile, err)
 							continue
 						}
-						// Delete the file after copying
 						err = os.Remove(collectionFile)
 						if err != nil {
 							log.Printf("Error deleting file %s: %v", collectionFile, err)

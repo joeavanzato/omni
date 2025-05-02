@@ -10,15 +10,19 @@ import (
 	"time"
 )
 
-// TODO - Deploy PowerShell script instead of batch script - need to theorize a bit on best approach
 // TODO - Alternate execution mechanisms
 
 type Config struct {
+	Preparations []struct {
+		Command string `yaml:"command"`
+		Note    string `yaml:"note"`
+	} `yaml:"preparations"`
 	Commands []struct {
 		Command  string     `yaml:"command"`
 		FileName string     `yaml:"file_name"`
 		Merge    MergeFuncs `yaml:"merge"`
 		ID       string     `yaml:"id"`
+		SkipDir  bool       `yaml:"skip_dir"`
 	} `yaml:"commands"`
 }
 
@@ -31,8 +35,10 @@ var (
 	execMethod = flag.String("method", "wmi", "execution method (wmi)")
 	targets    = flag.String("targets", "all", "comma-separated list of targets OR file-path to line-delimited targets - if not specified, will query for all enabled computer devices")
 	workers    = flag.Int("workers", 250, "number of concurrent workers to use")
-	timeout    = flag.Int("timeout", 3, "timeout in minutes for each worker to complete")
+	timeout    = flag.Int("timeout", 15, "timeout in minutes for each worker to complete")
 	aggregate  = flag.Bool("aggregate", false, "skip everything except aggregation - in the case where the script has already been run and you just want to aggregate the results")
+	nodownload = flag.Bool("nodownload", false, "skip downloading missing files contained inside 'commands' section of the config file")
+	prep       = flag.Bool("prepare", false, "executes commands on localhost listed in the 'prepare' section of the config file")
 
 	// Internal
 	currentTime     = time.Now().Format("15_04_05")
@@ -41,18 +47,36 @@ var (
 )
 
 func main() {
+	printLogo()
 	var err error
 	err = parseArgs()
 	if err != nil {
 		log.Fatalf("Error parsing arguments: %v", err)
 	}
+	log.Printf("Using config File: %s", *configFile)
+	log.Printf("Parsing config...\n")
 	config, err = parseConfig(*configFile)
 	if err != nil {
 		log.Fatalf("Error parsing config file: %v", err)
 	}
+	log.Printf("Validating config...\n")
 	err = validateConfig(config)
 	if err != nil {
 		log.Fatalf("Error validating config: %v", err)
+	}
+
+	if *prep {
+		log.Printf("Executing preparation commands on localhost")
+		// Execute the preparation commands on localhost
+		for _, v := range config.Preparations {
+			log.Printf("Command: %s", v.Command)
+			log.Printf("Note: %s", v.Note)
+			err = executeCommand(v.Command)
+			if err != nil {
+				log.Printf("Error executing preparation command: %v", err)
+			}
+		}
+		return
 	}
 
 	if *aggregate {
@@ -92,7 +116,7 @@ func main() {
 	log.Printf("Total Target Devices: %d", len(computerTargets))
 	log.Printf("Execution Method: %s", *execMethod)
 	log.Printf("Timeout: %d minutes", *timeout)
-	batScript, err := buildBatchScript(config)
+	batScript, err := buildBatchScript(config, *nodownload)
 	if err != nil {
 		log.Fatalf("Error building batch script: %v", err)
 	}

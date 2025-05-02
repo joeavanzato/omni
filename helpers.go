@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"strings"
 	"time"
@@ -376,4 +377,12 @@ func printLogo() {
 	fmt.Println("	omni - rapid network-wide evidence collection")
 	fmt.Println("	github.com/joeavanzato/omni")
 	fmt.Println("")
+}
+
+func getLastPathElement(path string) string {
+	if runtime.GOOS == "windows" {
+		path = strings.ReplaceAll(path, "/", "\\")
+	}
+	dir := filepath.Dir(path)
+	return filepath.Base(dir)
 }

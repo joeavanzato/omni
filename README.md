@@ -10,6 +10,11 @@ It works by dynamically building a batch file that is deployed to targets along 
 
 omni can receive a list of targets at the command-line, via a line-delimited file or can dynamically query Active Directory for all enabled computer accounts to use as response targets.
 
+
+<p align="center">
+  <img src="images/2.png">
+</p>
+
 ### Configuration File
 config.yaml can specify individual commands to execute - each of which are loaded into a batch file and prefixed with cmd.exe /c
 
@@ -63,6 +68,28 @@ preparations:
     note: Download and execute Get-ZimmermanTools into current working directory
 ```
 Each command is written to a temporary batch file and prefixed with cmd.exe /c before executing the bat.  Commands specified in either preparation or commands are executed in the order they are defined.
+
+### Collection
+After commands are finished executing on each host, omni will collect results back to a directory like 'devices\$DEVICENAME' for each host - this will look like below:
+
+<p align="center">
+  <img src="images/1.png">
+</p>
+
+File names correspond to the name specified in the config.yaml file for each executed command.  
+
+Additionally, if a merge function is specified such as 'csv', omni will attempt to merge all files across all devices when collection is complete to produce a unified file for each command output.
+
+For this to be useful, you should ensure that each command output includes a 'hostname' or similar - omni can also force-add a hostname column if the command configuration includes addhostname:true, such as below:
+
+```
+command: powershell.exe -Command "Get-NetNeighbor -ErrorAction SilentlyContinue | Select-Object * | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
+file_name: $time$_arp_cache.csv
+merge: csv
+id: arp_cache
+add_hostname: true
+```
+This will insert a column named 'PSComputerName' that will reflect the name of the base directory containing the current file being merged.
 
 ### Detailed Usage
 ```

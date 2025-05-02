@@ -29,14 +29,14 @@ func doMerges(c Config) error {
 			//sourceFile = strings.TrimSuffix(sourceFile, filepath.Ext(sourceFile))
 			destinationFile := fmt.Sprintf("aggregated\\%s.csv", v.ID)
 			wg.Add(1)
-			go doCSVMerge(sourceFile, destinationFile, &wg)
+			go doCSVMerge(sourceFile, destinationFile, &wg, v.AddHostname)
 		}
 	}
 	wg.Wait()
 	return nil
 }
 
-func doCSVMerge(sourceFile, destinationFile string, wg *sync.WaitGroup) {
+func doCSVMerge(sourceFile, destinationFile string, wg *sync.WaitGroup, addhostname bool) {
 	defer wg.Done()
 	// Find all files with sourceFile name in devices directory
 	firstFileDone := false
@@ -57,6 +57,10 @@ func doCSVMerge(sourceFile, destinationFile string, wg *sync.WaitGroup) {
 	defer fw.Close()
 	defer w.Flush()
 	for _, v := range files {
+		// TODO - Regex to extract ...devices\<hostname>\ instead of assuming we are always at the base
+		currentHost := getLastPathElement(v)
+		headerDone := false
+
 		func() {
 			var r *csv.Reader
 			var fr *os.File
@@ -77,10 +81,17 @@ func doCSVMerge(sourceFile, destinationFile string, wg *sync.WaitGroup) {
 						log.Printf("error reading header: %v (%s)", err, v)
 						break
 					}
+					if addhostname && !headerDone {
+						record = append([]string{"PSComputerName"}, record...)
+					} else if addhostname {
+						record = append([]string{currentHost}, record...)
+					}
+
 					if err := w.Write(record); err != nil {
 						log.Printf("error writing record: %v (%s)", err, v)
 						break
 					}
+					headerDone = true
 					record_count += 1
 				}
 				// In case the file has no records or we can't read it for some reason, this one won't count
@@ -105,6 +116,9 @@ func doCSVMerge(sourceFile, destinationFile string, wg *sync.WaitGroup) {
 					if err != nil {
 						log.Printf("error reading header: %v (%s)", err, v)
 						break
+					}
+					if addhostname {
+						record = append([]string{currentHost}, record...)
 					}
 					if err := w.Write(record); err != nil {
 						log.Printf("error writing record: %v (%s)", err, v)

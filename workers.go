@@ -1,0 +1,191 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+	"sync"
+	"time"
+)
+
+type ComputerReport struct {
+	PSComputerName    string
+	FilesCopied       bool
+	ExecutionSuccess  bool
+	SignalFileSuccess bool
+	ResultsCollected  bool
+}
+
+func startWorkers(batchFile string, targets []string, workers int, timeout int) {
+	batchBytes, err := os.ReadFile(batchFile)
+	if err != nil {
+		log.Fatalf("Error reading batch file: %v", err)
+	}
+
+	var wg sync.WaitGroup
+	workerChan := make(chan string, workers)
+	reportChan := make(chan ComputerReport, workers)
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go workerLoop(batchBytes, workerChan, &wg, reportChan, timeout)
+	}
+
+	var rg sync.WaitGroup
+	var computerReportData = make(map[string]ComputerReport)
+	rg.Add(1)
+	go func() {
+		defer rg.Done()
+		for {
+			report, ok := <-reportChan
+			if !ok {
+				break
+			}
+			computerReportData[report.PSComputerName] = report
+		}
+	}()
+	// Guaranteed to not store duplicates
+	for _, target := range targets {
+		workerChan <- target
+	}
+	close(workerChan)
+	wg.Wait()
+	close(reportChan)
+	rg.Wait()
+	reportHeaders := []string{"PSComputerName", "FilesCopied", "ExecutionSuccess", "SignalFileSuccess", "ResultsCollected"}
+	reportData := make([][]string, 0)
+	for _, v := range computerReportData {
+		row := []string{
+			v.PSComputerName,
+			fmt.Sprintf("%t", v.FilesCopied),
+			fmt.Sprintf("%t", v.ExecutionSuccess),
+			fmt.Sprintf("%t", v.SignalFileSuccess),
+			fmt.Sprintf("%t", v.ResultsCollected),
+		}
+		reportData = append(reportData, row)
+	}
+	err = exportSliceToCSV(reportHeaders, reportData, "computer_report.csv")
+	if err != nil {
+		log.Printf("failed to export ComputerReport CSV: %v", err)
+	}
+
+}
+
+func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, reportChan chan ComputerReport, timeout int) {
+	defer wg.Done()
+	for {
+		target, ok := <-workerChan
+		if !ok {
+			break
+		}
+		if target == "" {
+			continue
+		}
+		computerReport := ComputerReport{
+			PSComputerName:    target,
+			FilesCopied:       false,
+			ExecutionSuccess:  false,
+			SignalFileSuccess: false,
+			ResultsCollected:  false,
+		}
+
+		// We won't establish explicit SMB connection because we are on the domain running with appropriate authentication
+		// Process can negotiate on our behalf transparently assuming we have permissions and the share is available
+		// Deploy auxiliary files (scripts, binaries, etc) specified in config.yaml
+		for _, v := range filesToCopy {
+			targetPath := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, v)
+			// Copy v to targetPath
+			_, err := copyFile(v, targetPath)
+			if err != nil {
+				log.Printf("Error copying file %s to %s: %v", v, targetPath, err)
+				continue
+			}
+		}
+		// Deploy Batch
+		batchFile := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s_omni.bat", target, currentTime)
+		err := os.WriteFile(batchFile, batchBytes, 0644)
+		if err != nil {
+			log.Printf("Error writing batch file to %s: %v", target, err)
+			continue
+		}
+		computerReport.FilesCopied = true
+		// Execute Batch
+		err = executeRemoteWMI(target, fmt.Sprintf("cmd.exe /c %s", batchFile), "C:\\Windows\\temp", "", "", "")
+		if err != nil {
+			log.Printf("Error executing batch file on %s: %v", target, err)
+			reportChan <- computerReport
+			continue
+		}
+		computerReport.ExecutionSuccess = true
+		log.Printf("Successfully executed batch file on %s", target)
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Minute)
+		tempSignalFile := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, signalFile)
+		// Wait for signal file
+		done := false
+		for {
+			select {
+			case <-ctx.Done():
+				done = true
+				break
+			default:
+				time.Sleep(5 * time.Second)
+				_, err = os.Stat(tempSignalFile)
+				if err == nil {
+					time.Sleep(1 * time.Second)
+					computerReport.SignalFileSuccess = true
+					// Delete Signal File
+					err = os.Remove(tempSignalFile)
+					if err != nil {
+						log.Printf("Error deleting signal file %s on %s: %v", tempSignalFile, target, err)
+					}
+					// Delete Batch File
+					err = os.Remove(batchFile)
+					if err != nil {
+						log.Printf("Error deleting batch file %s on %s: %v", batchFile, target, err)
+					}
+
+					// Collect and Delete Files
+					collectionFolder := fmt.Sprintf("devices\\%s", target)
+					err = os.MkdirAll(collectionFolder, os.ModePerm)
+					if err != nil {
+						log.Printf("Error creating collection folder %s: %v", collectionFolder, err)
+						reportChan <- computerReport
+						continue
+					}
+					for _, v := range filesToCopy {
+						tmp := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, v)
+						err = os.Remove(tmp)
+						if err != nil {
+							log.Printf("Error deleting file %s: %v", tmp, err)
+							continue
+						}
+					}
+
+					for _, v := range collectionFiles {
+						collectionFile := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, v)
+						destinationFile := fmt.Sprintf("%s\\%s", collectionFolder, v)
+						_, err = copyFile(collectionFile, destinationFile)
+						if err != nil {
+							log.Printf("Error copying file %s to %s: %v", collectionFile, destinationFile, err)
+							continue
+						}
+						// Delete the file after copying
+						err = os.Remove(collectionFile)
+						if err != nil {
+							log.Printf("Error deleting file %s: %v", collectionFile, err)
+							continue
+						}
+					}
+					computerReport.ResultsCollected = true
+					cancel()
+				}
+			}
+			if done {
+				break
+			}
+		}
+		cancel()
+		reportChan <- computerReport
+	}
+}

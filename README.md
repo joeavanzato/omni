@@ -94,7 +94,7 @@ This will insert a column named 'PSComputerName' that will reflect the name of t
 ### Detailed Usage
 ```
   -aggregate
-        skip everything except aggregation - in the case where the script has already been run and you just want to aggregate the results, such as force-closing/early termination
+        skip everything except aggregation - in the case where the script has already been run and you just want to aggregate the results
   -config string
         path to config file (default "config.yaml")
   -method string
@@ -103,6 +103,8 @@ This will insert a column named 'PSComputerName' that will reflect the name of t
         skip downloading missing files contained inside 'commands' section of the config file
   -prepare
         executes commands on localhost listed in the 'prepare' section of the config file
+  -tags string
+        comma-separated list of tags to filter the config file by - if not specified, all commands will be executed (default "*")
   -targets string
         comma-separated list of targets OR file-path to line-delimited targets - if not specified, will query for all enabled computer devices (default "all")
   -timeout int
@@ -110,3 +112,14 @@ This will insert a column named 'PSComputerName' that will reflect the name of t
   -workers int
         number of concurrent workers to use (default 250)
 ```
+
+### Running Common Tools
+
+omni is designed to be flexible - as such, it is more than feasible to run any type of host-based tool at scale - for example, KAPE - we could setup a command processor that drops KAPE on our targets, executes and then collects the resulting ZIPs like below:
+```
+command: dir=KAPE | C:\windows\temp\kape\kape.exe --tsource C: --tdest C:\Windows\temp\kape\machine\ --tflush --target !SANS_Triage --zip kape && powershell.exe -Command "$kapezip = Get-ChildItem -Path C:\Windows\temp\kape\machine\*.zip; Rename-Item -Path $kapezip.FullName -NewName '$FILENAME$'"
+file_name: $time$_kape.zip
+merge: none
+id: kape
+```
+Then we could aggregate over our collected zips to ensure they retain a machine-name and collect them to a single folder for additional processing.

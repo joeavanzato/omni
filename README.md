@@ -6,11 +6,16 @@
 
 # omni
 
+### What is it?
+
+- An open-source, modular, extensible utility for collecting evidence from commands, scripts and files on remote Windows devices to enhance the efficiency of Incident Responders
+
+
 omni helps incident responders rapidly aggregate information from domain-joined devices across an enterprise network.
 
-The focus is collecting light-weight datasets as quickly as possible to help responders identify anomalies and quickly hunt known-bad indicators across a network.
+The focus is on collecting light-weight datasets as quickly as possible to help responders identify anomalies and quickly hunt known-bad indicators across a network - but technically it is possible to execute and collect any type of evidence.
 
-It is easy to collect any type of data by modifying config.yaml on the fly to run scripts, commands or tools on remote devices.
+It is easy to collect new data by modifying config.yaml on the fly to run scripts, commands or tools on remote devices.
 
 It works by dynamically building a batch file that is deployed to targets along with any specified files and directories - this batch file controls execution and is remotely executed via WMI by default - output files are then retrieved via SMB and deployed artifacts are cleaned-up from each target.
 

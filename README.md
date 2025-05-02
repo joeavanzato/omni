@@ -3,17 +3,18 @@
 <p align="center">
   <img width="400" src="images/omni.png">
 </p>
+
 ### What is it?
 
-- An open-source, modular, extensible utility for collecting evidence from commands, scripts and files on remote Windows devices to enhance the efficiency of Incident Responders
+- An open-source, modular, extensible utility for collecting evidence via commands, scripts and files from remote Windows devices to enhance the efficiency of Incident Responders
 
 omni helps incident responders rapidly aggregate information from domain-joined devices across an enterprise network.
 
-The focus is on collecting light-weight datasets as quickly as possible to help responders identify anomalies and quickly hunt known-bad indicators across a network - but technically it is possible to execute and collect any type of evidence.
+The main focus is on collecting light-weight datasets as quickly as possible to help responders identify anomalies and quickly hunt known-bad indicators across a network - but technically it is possible to execute and collect any type of evidence using any type of host-based tooling.
 
 It is easy to collect new data by modifying config.yaml on the fly to run scripts, commands or tools on remote devices.
 
-It works by dynamically building a batch file that is deployed to targets along with any specified files and directories - this batch file controls execution and is remotely executed via WMI by default - output files are then retrieved via SMB and deployed artifacts are cleaned-up from each target.
+It works by dynamically building a batch file that is deployed to targets along with any specified files and directories - this batch file controls execution and is remotely executed via schtasks by default - output files are then retrieved via SMB and deployed artifacts are cleaned-up from each target.
 
 omni can receive a list of targets at the command-line, via a line-delimited file or can dynamically query Active Directory for all enabled computer accounts to use as response targets.
 
@@ -21,6 +22,23 @@ omni can receive a list of targets at the command-line, via a line-delimited fil
 <p align="center">
   <img src="images/2.png">
 </p>
+
+### Example Usage
+```
+omni.exe
+- Will launch omni with all targets from config.yaml and default timeout/worker settings using WMI and will query AD for targets
+
+omni.exe -workers 500 -timeout 30 -tags quick,process
+- Add more workers, increase the timeout duration per-target and only use configurations with the specified tags
+
+omni.exe -targets hostname1,hostname2,hostname3
+omni.exe -targets targets.txt
+- Use the specified computer targets
+
+omni.exe -method task
+- Deploy omni using Scheduled Tasks instead of WMI for remote execution
+
+```
 
 ### Configuration File
 The configuration file controls omni's behavior - it is a YAML file that specifies commands to run, files/directories to copy, tools to prepare/download, etc.

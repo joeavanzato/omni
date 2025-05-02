@@ -66,11 +66,11 @@ commands:
     file_name: $time$_PECmd.csv
     merge: csv
     id: PECmd
-  - command: dir=net6\RECmd | C:\Windows\Temp\net6\RECmd\RECmd.exe -d C:\Users --csvf $FILENAME$ --bn C:\Windows\Temp\net6\RECmd\BatchExamples\DFIRBatch.reb && powershell.exe -Command "$data = Import-CSV -Path $FILENAME$; $data | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},* | Export-CSV -Path $FILENAME$ -NoTypeInformation"
+  - command: dir=net6\RECmd | C:\Windows\Temp\net6\RECmd\RECmd.exe -d C:\Users --csv C:\Windows\Temp --csvf $FILENAME$ --bn C:\Windows\Temp\net6\RECmd\BatchExamples\DFIRBatch.reb && powershell.exe -Command "$data = Import-CSV -Path $FILENAME$; $data | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},* | Export-CSV -Path $FILENAME$ -NoTypeInformation"
     file_name: $time$_RECmd_DFIRBatch_Users.csv
     merge: csv
     id: RECmd_DFIRBatch_Users
-  - command: dir=net6\RECmd | C:\Windows\Temp\net6\RECmd\RECmd.exe -d C:\Windows --csvf $FILENAME$ --bn C:\Windows\Temp\net6\RECmd\BatchExamples\DFIRBatch.reb && powershell.exe -Command "$data = Import-CSV -Path $FILENAME$; $data | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},* | Export-CSV -Path $FILENAME$ -NoTypeInformation"
+  - command: dir=net6\RECmd | C:\Windows\Temp\net6\RECmd\RECmd.exe -d C:\Windows --csv C:\Windows\Temp --csvf $FILENAME$ --bn C:\Windows\Temp\net6\RECmd\BatchExamples\DFIRBatch.reb && powershell.exe -Command "$data = Import-CSV -Path $FILENAME$; $data | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},* | Export-CSV -Path $FILENAME$ -NoTypeInformation"
     file_name: $time$_RECmd_DFIRBatch_Windows.csv
     merge: csv
     id: RECmd_DFIRBatch_Windows

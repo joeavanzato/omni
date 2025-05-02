@@ -368,11 +368,8 @@ func printLogo() {
 	s := `
 	 ▄▄▄  ▄▄▄▄  ▄▄▄▄  ▄ 
 	█   █ █ █ █ █   █ ▄ 
-	▀▄▄▄▀ █   █ █   █ █ 
-					  █ 
-						
-						
-						`
+	▀▄▄▄▀ █   █ █   █ █ 	
+`
 	fmt.Println(s)
 	fmt.Println("	omni - rapid network-wide evidence collection")
 	fmt.Println("	github.com/joeavanzato/omni")

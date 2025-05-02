@@ -1,0 +1,147 @@
+package main
+
+import (
+	"encoding/csv"
+	"fmt"
+	"io"
+	"log"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+)
+
+type MergeFuncs string
+
+var validMergeFuncs = []MergeFuncs{MergeFuncCSV}
+
+const (
+	MergeFuncCSV MergeFuncs = "csv"
+)
+
+func doMerges(c Config) error {
+	// For each command that specifies CSV merge, we find all the relevant files
+	var wg sync.WaitGroup
+	for _, v := range c.Commands {
+		if v.Merge == MergeFuncCSV {
+			//sourceFile := doFileNameReplacements(v.FileName)
+			sourceFile := strings.Replace(v.FileName, "$time$", "", 1)
+			//sourceFile = strings.TrimSuffix(sourceFile, filepath.Ext(sourceFile))
+			destinationFile := fmt.Sprintf("aggregated\\%s.csv", v.ID)
+			wg.Add(1)
+			go doCSVMerge(sourceFile, destinationFile, &wg)
+		}
+	}
+	wg.Wait()
+	return nil
+}
+
+func doCSVMerge(sourceFile, destinationFile string, wg *sync.WaitGroup) {
+	defer wg.Done()
+	// Find all files with sourceFile name in devices directory
+	firstFileDone := false
+	files, err := findFilesByName("devices", sourceFile, true)
+	if err != nil {
+		log.Printf("error finding files: %v (%s)", err, sourceFile)
+		return
+	}
+	if len(files) == 0 {
+		log.Printf("no files found for %s", sourceFile)
+		return
+	}
+	w, fw, err := createCSVWriter(destinationFile)
+	if err != nil {
+		log.Printf("error creating CSV writer: %v (%s)", err, destinationFile)
+		return
+	}
+	defer fw.Close()
+	defer w.Flush()
+	for _, v := range files {
+		func() {
+			var r *csv.Reader
+			var fr *os.File
+			r, fr, err = createCSVReader(v)
+			if err != nil {
+				log.Printf("error creating CSV reader: %v (%s)", err, v)
+				return
+			}
+			defer fr.Close()
+			if !firstFileDone {
+				record_count := 0
+				for {
+					record, err := r.Read()
+					if err == io.EOF {
+						break
+					}
+					if err != nil {
+						log.Printf("error reading header: %v (%s)", err, v)
+						break
+					}
+					if err := w.Write(record); err != nil {
+						log.Printf("error writing record: %v (%s)", err, v)
+						break
+					}
+					record_count += 1
+				}
+				// In case the file has no records or we can't read it for some reason, this one won't count
+				if record_count != 0 {
+					firstFileDone = true
+				}
+			} else {
+				// Skip the header
+				_, err := r.Read()
+				if err == io.EOF {
+					return
+				}
+				if err != nil {
+					log.Printf("error reading header: %v (%s)", err, v)
+					return
+				}
+				for {
+					record, err := r.Read()
+					if err == io.EOF {
+						break
+					}
+					if err != nil {
+						log.Printf("error reading header: %v (%s)", err, v)
+						break
+					}
+					if err := w.Write(record); err != nil {
+						log.Printf("error writing record: %v (%s)", err, v)
+						break
+					}
+				}
+			}
+		}()
+	}
+
+}
+
+// findFilesByName searches for files with the specified name in the given directory and its subdirectories.
+// Does not check extension
+func findFilesByName(root string, filename string, suffixMatch bool) ([]string, error) {
+	var matches []string
+	err := filepath.WalkDir(root, func(path string, info os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		if suffixMatch {
+			// Check if the file name ends with the specified filename
+			if strings.HasSuffix(info.Name(), filename) {
+				matches = append(matches, path)
+			}
+			return nil
+		} else if info.Name() == filename {
+			matches = append(matches, path)
+			return nil
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return matches, nil
+}

@@ -403,3 +403,15 @@ func getLastPathElement(path string) string {
 	dir := filepath.Dir(path)
 	return filepath.Base(dir)
 }
+
+func moveFile(source, destination string) error {
+	err := copyFile(source, destination)
+	if err != nil {
+		return err
+	}
+	err = os.Remove(source)
+	if err != nil {
+		return err
+	}
+	return nil
+}

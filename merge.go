@@ -7,17 +7,19 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 )
 
 type MergeFuncs string
 
-var validMergeFuncs = []MergeFuncs{MergeFuncCSV, MergeFuncNone}
+var validMergeFuncs = []MergeFuncs{MergeFuncCSV, MergeFuncNone, MergeFuncPool}
 
 const (
 	MergeFuncCSV  MergeFuncs = "csv"
 	MergeFuncNone MergeFuncs = "none"
+	MergeFuncPool MergeFuncs = "pool"
 )
 
 func doMerges(c Config) error {
@@ -31,10 +33,48 @@ func doMerges(c Config) error {
 			destinationFile := fmt.Sprintf("aggregated\\%s.csv", v.ID)
 			wg.Add(1)
 			go doCSVMerge(sourceFile, destinationFile, &wg, v.AddHostname)
+		} else if v.Merge == MergeFuncNone {
+
+		} else if v.Merge == MergeFuncPool {
+			wg.Add(1)
+			go doPoolMerge(strings.Replace(v.FileName, "$time$", "", 1), "aggregated", &wg, v.AddHostname)
 		}
 	}
 	wg.Wait()
 	return nil
+}
+
+func doPoolMerge(sourceFile, destinationDir string, wg *sync.WaitGroup, addhostname bool) {
+	defer wg.Done()
+	files, err := findFilesByName("devices", sourceFile, true)
+	if err != nil {
+		log.Printf("error finding files: %v (%s)", err, sourceFile)
+		return
+	}
+	if len(files) == 0 {
+		log.Printf("no files found for %s", sourceFile)
+		return
+	}
+	devicePattern := regexp.MustCompile(`devices\\([\w\-\.]+)\\`)
+	for _, v := range files {
+		fileName := filepath.Base(v)
+		if addhostname {
+			matches := devicePattern.FindStringSubmatch(v)
+			if len(matches) > 1 {
+				fileName = fmt.Sprintf("%s_%s", matches[1], fileName)
+			} else {
+				log.Printf("error parsing device regex for file %s", v)
+				continue
+			}
+		}
+		destPath := fmt.Sprintf("%s\\%s", destinationDir, fileName)
+		err = moveFile(v, destPath)
+		if err != nil {
+			log.Printf("error moving file %s to %s: %v", fileName, destPath, err)
+			continue
+		}
+
+	}
 }
 
 func doCSVMerge(sourceFile, destinationFile string, wg *sync.WaitGroup, addhostname bool) {

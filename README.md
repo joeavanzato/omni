@@ -3,13 +3,9 @@
 <p align="center">
   <img width="400" src="images/omni.png">
 </p>
-
-# omni
-
 ### What is it?
 
 - An open-source, modular, extensible utility for collecting evidence from commands, scripts and files on remote Windows devices to enhance the efficiency of Incident Responders
-
 
 omni helps incident responders rapidly aggregate information from domain-joined devices across an enterprise network.
 
@@ -27,9 +23,18 @@ omni can receive a list of targets at the command-line, via a line-delimited fil
 </p>
 
 ### Configuration File
-config.yaml can specify individual commands to execute - each of which are loaded into a batch file and prefixed with cmd.exe /c
+The configuration file controls omni's behavior - it is a YAML file that specifies commands to run, files/directories to copy, tools to prepare/download, etc.
 
-We can also specify files - locally or remotely, that are to be copied to the target device - for example, see below:
+config.yaml can specify individual commands to execute - each of which are loaded into a batch file and prefixed with cmd.exe /c - for example:
+```
+command: powershell.exe -Command "Get-WmiObject -Class Win32_StartupCommand -Locale MS_409 -ErrorAction SilentlyContinue | Select PSComputerName,Caption,Command,Description,Location,Name,User,UserSID | Export-Csv -Path '$FILENAME$' -NoTypeInformation"
+file_name: $time$_wmi_startups.csv
+merge: csv
+id: wmi_startups
+tags: [quick, persistence]
+```
+
+We can also specify files - locally or remotely, that are to be copied to the target device for further use - such as copying a complex PowerShell script to execute:
 
 ```
 command: file=https://raw.githubusercontent.com/joeavanzato/trawler/master/trawler.ps1 | powershell.exe -Command "Add-MpPreference -ExclusionPath "C:\Windows\Temp\trawler.ps1" -Force" & powershell.exe C:\Windows\temp\trawler.ps1 -csvfilename '$FILENAME$' -OutputLocation 'C:\Windows\temp' -ScanOptions ActiveSetup,AMSIProviders,AppCertDLLs,AppInitDLLs,ApplicationShims,AppPaths,AssociationHijack,AutoDialDLL,BIDDll,BITS,BootVerificationProgram,COMHijacks,CommandAutoRunProcessors,Connections,ContextMenu,ChromiumExtensions,DebuggerHijacks,DNSServerLevelPluginDLL,DisableLowIL,DirectoryServicesRestoreMode,DiskCleanupHandlers,ErrorHandlerCMD,ExplorerHelperUtilities,FolderOpen,GPOExtensions,GPOScripts,HTMLHelpDLL,IFEO,InstalledSoftware,InternetSettingsLUIDll,KnownManagedDebuggers,LNK,LSA,MicrosoftTelemetryCommands,ModifiedWindowsAccessibilityFeature,MSDTCDll,Narrator,NaturalLanguageDevelopmentDLLs,NetSHDLLs,NotepadPPPlugins,OfficeAI,OfficeGlobalDotName,Officetest,OfficeTrustedLocations,OfficeTrustedDocuments,OutlookStartup,PATHHijacks,PeerDistExtensionDll,PolicyManager,PowerShellProfiles,PrintMonitorDLLs,PrintProcessorDLLs,RATS,RDPShadowConsent,RDPStartupPrograms,RemoteUACSetting,ScheduledTasks,ScreenSaverEXE,ServiceControlManagerSD,SEMgrWallet,ServiceHijacks,Services,SethcHijack,SilentProcessExitMonitoring,Startups,SuspiciousFileLocation,TerminalProfiles,TerminalServicesDLL,TerminalServicesInitialProgram,TimeProviderDLLs,TrustProviderDLL,UninstallStrings,UserInitMPRScripts,Users,UtilmanHijack,WellKnownCOM,WERRuntimeExceptionHandlers,WindowsLoadKey,WindowsUnsignedFiles,WindowsUpdateTestDlls,WinlogonHelperDLLs,WMIConsumers,Wow64LayerAbuse,WSL & powershell.exe -Command "Remove-MpPreference -ExclusionPath "C:\Windows\Temp\trawler.ps1" -Force"
@@ -50,7 +55,7 @@ id: trawler
 ```
 Just remember - all files are copied into C:\Windows\temp\$BASENAME$ for the subsequent execution command.
 
-config.yaml comes preloaded to run most of the 'rapid' EZ tools - to make the most of this, use 'omni.exe -prepare' to execute preparation statements, including Get-ZimmermanTools and any other configured commands designed to stage the response directory.
+config.yaml comes preloaded to run many EZ Tools - to make the most of this, use 'omni.exe -prepare' to execute preparation statements, including Get-ZimmermanTools and any other configured commands designed to stage the response directory.
 
 Some of these tools require ancillary files (DLLs, etc) be copied to the host - to copy multiple individual files, use ',' as a delimiter, like below.
 
@@ -130,7 +135,19 @@ omni is designed to be flexible - as such, it is more than feasible to run any t
 ```
 command: dir=KAPE | C:\windows\temp\kape\kape.exe --tsource C: --tdest C:\Windows\temp\kape\machine\ --tflush --target !SANS_Triage --zip kape && powershell.exe -Command "$kapezip = Get-ChildItem -Path C:\Windows\temp\kape\machine\*.zip; Rename-Item -Path $kapezip.FullName -NewName '$FILENAME$'"
 file_name: $time$_kape.zip
-merge: none
+merge: pool
 id: kape
+add_hostname: True
 ```
-Then we could aggregate over our collected zips to ensure they retain a machine-name and collect them to a single folder for additional processing.
+
+This will result in running KAPE with the specified arguments, copying the resulting ZIP back to our device folder and then renaming it with the detected hostname and moving all output ZIPs into our 'aggregated' directory once all collections are completed.
+
+### Merge Types
+* csv
+  * Merges all CSV files having the same suffix into a single CSV file - this is most appropriate if your command/tool outputs to a CSV
+  * add_hostname will insert a column at the beginning of the CSV with the detected device name based on the parent directory
+* none
+  * Do not do any type of merging on collected files - they will remain in their per-device directories
+* pool
+  * Collect files that match the suffix and move them into the 'aggregated' directory
+  * add_hostname will add a prefix to the filename with the detected device name based on the parent directory

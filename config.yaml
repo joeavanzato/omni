@@ -6,71 +6,89 @@ commands:
     file_name: $time$_processes.csv
     merge: csv
     id: processes
+    tags: [quick, process]
   - command: powershell.exe -Command "Get-WmiObject -Class Win32_Service -Locale MS_409 -ErrorAction SilentlyContinue | Select PSComputerName,Name,Status,ExitCode,DesktopInteract,ErrorControl,PathName,ServiceType,StartMode,AcceptPause,AcceptStop,Caption,CheckPoint,DelayedAutoStart,Description,DisplayName,InstallDate,ProcessId,ServiceSpecificExitCode,Started,StartName,State | Export-Csv -Path '$FILENAME$' -NoTypeInformation"
     file_name: $time$_services.csv
     merge: csv
     id: services
+    tags: [quick, persistence]
   - command: powershell.exe -Command "Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* -ErrorAction SilentlyContinue | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},DisplayName,DisplayVersion,Version,NoRemove,ModifyPath,UninstallString,InstallLocation,DisplayIcon,NoRepair,Publisher,InstallDate,VersionMajor,VersionMinor,BundleCachePath,BundleUpgradePath,BundleAddonCode,BundleDetectCode,BundlePatchCode,BundleVersion,BundleProviderKey,BundleTag,EngineVersion,NoElevateOnModify,QuietUninstallString,EstimatedSize,Resume,Installed,InstallSource | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
     file_name: $time$_products.csv
     merge: csv
     id: products
+    tags: [quick, persistence]
   - command: powershell.exe -Command "Get-WmiObject -Class Win32_StartupCommand -Locale MS_409 -ErrorAction SilentlyContinue | Select PSComputerName,Caption,Command,Description,Location,Name,User,UserSID | Export-Csv -Path '$FILENAME$' -NoTypeInformation"
     file_name: $time$_wmi_startups.csv
     merge: csv
     id: wmi_startups
+    tags: [quick, persistence]
   - command: powershell.exe -Command "Get-WmiObject -Namespace 'root\StandardCimv2' -Class 'MSFT_NetTCPConnection' -Locale MS_409 -ErrorAction SilentlyContinue | Select PSComputerName,AggregationBehavior,AppliedSetting,AvailableRequestedStates,Caption,CommunicationStatus,CreationTime,Description,DetailedStatus,Directionality,ElementName,EnabledDefault,EnabledState,HealthState,InstallDate,InstanceID,LocalAddress,LocalPort,Name,OffloadState,OperatingStatus,OperationalStatus,OwningProcess,PrimaryStatus,RemoteAddress,RemotePort,RequestedState,State,Status,TimeOfLastStateChange,TransitioningToState | Export-Csv -Path '$FILENAME$' -NoTypeInformation"
     file_name: $time$_tcp_connections.csv
     merge: csv
     id: tcp_connections
+    tags: [quick, network]
   - command: powershell.exe -Command "Get-ScheduledTask | Select-Object @{Name='PSComputerName';Expression={$env:COMPUTERNAME}},TaskName, TaskPath, Description, State, Author, SecurityDescriptor, Source, Date, URI, Documentation, @{Name='Actions';Expression={$_.Actions | ForEach-Object {$_.Execute + ' ' + $_.Arguments}}}, @{Name='Triggers';Expression={$_.Triggers | ForEach-Object {$_.ToString()}}}, @{Name='AllowDemandStart';Expression={$_.Settings.AllowDemandStart}}, @{Name='AllowHardTerminate';Expression={$_.Settings.AllowHardTerminate}}, @{Name='Compatibility';Expression={$_.Settings.Compatibility}}, @{Name='DeleteExpiredTaskAfter';Expression={$_.Settings.DeleteExpiredTaskAfter}}, @{Name='DisallowStartIfOnBatteries';Expression={$_.Settings.DisallowStartIfOnBatteries}}, @{Name='ExecutionTimeLimit';Expression={$_.Settings.ExecutionTimeLimit}}, @{Name='Hidden';Expression={$_.Settings.Hidden}}, @{Name='IdleSettings';Expression={$_.Settings.IdleSettings}}, @{Name='MultipleInstances';Expression={$_.Settings.MultipleInstances}}, @{Name='NetworkSettings';Expression={$_.Settings.NetworkSettings}}, @{Name='Priority';Expression={$_.Settings.Priority}}, @{Name='RestartCount';Expression={$_.Settings.RestartCount}}, @{Name='RestartInterval';Expression={$_.Settings.RestartInterval}}, @{Name='RunOnlyIfIdle';Expression={$_.Settings.RunOnlyIfIdle}}, @{Name='RunOnlyIfNetworkAvailable';Expression={$_.Settings.RunOnlyIfNetworkAvailable}}, @{Name='StartWhenAvailable';Expression={$_.Settings.StartWhenAvailable}}, @{Name='StopIfGoingOnBatteries';Expression={$_.Settings.StopIfGoingOnBatteries}}, @{Name='WakeToRun';Expression={$_.Settings.WakeToRun}} | Export-Csv -Path '$FILENAME$' -NoTypeInformation"
     file_name: $time$_scheduled_tasks.csv
     merge: csv
     id: scheduled_tasks
+    tags: [quick, persistence]
   - command: powershell.exe -Command "Get-WmiObject -Namespace 'root\Microsoft\Windows\SMB' -Class MSFT_SmbShare -Locale MS_409 -ErrorAction SilentlyContinue | Select PSComputerName,AvailabilityType,CachingMode,CATimeout,ConcurrentUserLimit,ContinuouslyAvailable,CurrentUsers,Description,EncryptData,FolderEnumerationMode,IdentityRemoting,Infrastructure,LeasingMode,Name,Path,Scoped,ScopeName,SecurityDescriptor,ShadowCopy,ShareState,ShareType,SmbInstance,Special,Temporary,Volume | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
     file_name: $time$_smb_shares.csv
     merge: csv
     id: smb_shares
+    tags: [quick, network]
   - command: powershell.exe -Command "Get-WmiObject -Namespace 'root/StandardCimv2' -Class 'MSFT_DNSClientCache' -Locale MS_409 -ErrorAction SilentlyContinue | Select PSComputerName,Caption,Data,DataLength,Description,ElementName,Entry,InstanceID,Name,Section,Status,TimeToLive,Type,Qualifiers,Site,Container | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
     file_name: $time$_dns_cache.csv
     merge: csv
     id: dns_cache
+    tags: [quick, network]
   - command: powershell.exe -Command "Get-HotFix -ErrorAction SilentlyContinue | Select * | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
     file_name: $time$_patches.csv
     merge: csv
     id: patches
+    tags: [quick, system]
   - command: powershell.exe -Command "quser 2>&1 | ForEach-Object -Process { $_ -replace '\s{2,}',',' } | ConvertFrom-Csv | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},* | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
     file_name: $time$_quser.csv
     merge: csv
     id: quser
+    tags: [quick, network]
   - command: powershell.exe -Command "Get-ComputerInfo -ErrorAction SilentlyContinue | Select CsName,WindowsCurrentVersion,WindowsEditionId,WindowsInstallationType,WindowsInstallDateFromRegistry,WindowsProductName,WindowsRegisteredOrganization,WindowsRegisteredOwner,WindowsVersion,BiosCaption,BiosFirmwareType,BiosManufacturer,BiosReleaseDate,BiosVersion,CsAdminPasswordStatus,CsManufacturer,CsName,CsPartOfDomain,CsPCSystemType,CsRoles,OsNameOsType,OsCurrentTimeZone,OsLocale,OsLocalDateTime,OsLastBootUpTime,OsUptime,OsNumberOfUsers,TimeZone,LogonServer,CsUserName | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
     file_name: $time$_systeminfo.csv
     merge: csv
     id: systeminfo
+    tags: [quick, system]
   - command: powershell.exe -Command "Get-NetFirewallRule -ErrorAction SilentlyContinue | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},* | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
     file_name: $time$_firewall_rules.csv
     merge: csv
     id: firewall_rules
+    tags: [quick, network]
   - command: powershell.exe -Command "Get-NetNeighbor -ErrorAction SilentlyContinue | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},* | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
     file_name: $time$_arp_cache.csv
     merge: csv
     id: arp_cache
+    tags: [quick, network]
   - command: file=https://raw.githubusercontent.com/joeavanzato/Trawler/refs/heads/main/trawler.ps1 | powershell.exe -Command "Add-MpPreference -ExclusionPath "C:\Windows\Temp\trawler.ps1" -Force" & powershell.exe C:\Windows\temp\trawler.ps1 -csvfilename '$FILENAME$' -OutputLocation 'C:\Windows\temp' -ScanOptions ActiveSetup,AMSIProviders,AppCertDLLs,AppInitDLLs,ApplicationShims,AppPaths,AssociationHijack,AutoDialDLL,BIDDll,BITS,BootVerificationProgram,COMHijacks,CommandAutoRunProcessors,Connections,ContextMenu,ChromiumExtensions,DebuggerHijacks,DNSServerLevelPluginDLL,DisableLowIL,DirectoryServicesRestoreMode,DiskCleanupHandlers,ErrorHandlerCMD,ExplorerHelperUtilities,FolderOpen,GPOExtensions,GPOScripts,HTMLHelpDLL,IFEO,InstalledSoftware,InternetSettingsLUIDll,KnownManagedDebuggers,LNK,LSA,MicrosoftTelemetryCommands,ModifiedWindowsAccessibilityFeature,MSDTCDll,Narrator,NaturalLanguageDevelopmentDLLs,NetSHDLLs,NotepadPPPlugins,OfficeAI,OfficeGlobalDotName,Officetest,OfficeTrustedLocations,OfficeTrustedDocuments,OutlookStartup,PATHHijacks,PeerDistExtensionDll,PolicyManager,PowerShellProfiles,PrintMonitorDLLs,PrintProcessorDLLs,RATS,RDPShadowConsent,RDPStartupPrograms,RemoteUACSetting,ScheduledTasks,ScreenSaverEXE,ServiceControlManagerSD,SEMgrWallet,ServiceHijacks,Services,SethcHijack,SilentProcessExitMonitoring,Startups,SuspiciousFileLocation,TerminalProfiles,TerminalServicesDLL,TerminalServicesInitialProgram,TimeProviderDLLs,TrustProviderDLL,UninstallStrings,UserInitMPRScripts,Users,UtilmanHijack,WellKnownCOM,WERRuntimeExceptionHandlers,WindowsLoadKey,WindowsUnsignedFiles,WindowsUpdateTestDlls,WinlogonHelperDLLs,WMIConsumers,Wow64LayerAbuse,WSL & powershell.exe -Command "Remove-MpPreference -ExclusionPath "C:\Windows\Temp\trawler.ps1" -Force"
     file_name: $time$_trawler.csv
     merge: csv
     id: trawler
+    tags: [persistence]
   - command: powershell.exe -Command "Get-ChildItem -Path $env:HOMEDRIVE\\temp,$env:HOMEDRIVE\\windows\\system32,$env:HOMEDRIVE\\windows\\temp,$env:HOMEDRIVE\\Users,$env:HOMEDRIVE\\programdata -Include *.htm,*.vbs,*.hta,*.chm,*.dll,*.exe,*.bat,*.ps1,*.zip,*.gz,*.7z,*.vba,*.ps,*.psm1,*.docm,*.xlsm,*.pptm,*.potm,*.ppam,*.ppsm,*.sldm,*.dotm,*.xltm,*.xlam,*.lnk,*.vb,*.pdf,*.jar,*.msi,*.msp,*.gadget,*.cmd,*.vbe,*.jsp,*.scr,*.rar,*.msh,*.wsh,*.wsf,*.scf -File -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.CreationTime -lt (Get-Date).AddDays(-7) } | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},PSPath,PSParentPath,PSChildName,PSDrive,PSProvider,PSIsContainer,Mode,LinkType,Name,Length,DirectoryName,Directory,IsReadOnly,Exists,FullName,Extension,CreationTime,CreationTimeUtc,LastAccessTime,LastAccessTimeUtc,LastWriteTime,LastWriteTimeUtc | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
     file_name: $time$_suspicious_extensions_created_last7days.csv
     merge: csv
+    tags: [quick, file]
     id: suspicious_extensions_created_last7days
   - command: file=net6\PECmd.exe,net6\PECmd.dll | C:\Windows\Temp\PECmd.exe -d C:\Windows\Prefetch --csvf $FILENAME$ && powershell.exe -Command "$data = Import-CSV -Path $FILENAME$; $data | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},* | Export-CSV -Path $FILENAME$ -NoTypeInformation"
     file_name: $time$_PECmd.csv
     merge: csv
     id: PECmd
+    tags: [quick, process]
   - command: dir=net6\RECmd | C:\Windows\Temp\net6\RECmd\RECmd.exe -d C:\Users --csv C:\Windows\Temp --csvf $FILENAME$ --bn C:\Windows\Temp\net6\RECmd\BatchExamples\DFIRBatch.reb && powershell.exe -Command "$data = Import-CSV -Path $FILENAME$; $data | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},* | Export-CSV -Path $FILENAME$ -NoTypeInformation"
     file_name: $time$_RECmd_DFIRBatch_Users.csv
     merge: csv
     id: RECmd_DFIRBatch_Users
+    tags: [reg]
   - command: dir=net6\RECmd | C:\Windows\Temp\net6\RECmd\RECmd.exe -d C:\Windows --csv C:\Windows\Temp --csvf $FILENAME$ --bn C:\Windows\Temp\net6\RECmd\BatchExamples\DFIRBatch.reb && powershell.exe -Command "$data = Import-CSV -Path $FILENAME$; $data | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},* | Export-CSV -Path $FILENAME$ -NoTypeInformation"
     file_name: $time$_RECmd_DFIRBatch_Windows.csv
     merge: csv
     id: RECmd_DFIRBatch_Windows
+    tags: [reg]

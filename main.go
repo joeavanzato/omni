@@ -24,6 +24,7 @@ type Config struct {
 		ID          string     `yaml:"id"`
 		SkipDir     bool       `yaml:"skip_dir"`
 		AddHostname bool       `yaml:"add_hostname"`
+		Tags        []string   `yaml:"tags"`
 	} `yaml:"commands"`
 }
 
@@ -40,6 +41,7 @@ var (
 	aggregate  = flag.Bool("aggregate", false, "skip everything except aggregation - in the case where the script has already been run and you just want to aggregate the results")
 	nodownload = flag.Bool("nodownload", false, "skip downloading missing files contained inside 'commands' section of the config file")
 	prep       = flag.Bool("prepare", false, "executes commands on localhost listed in the 'prepare' section of the config file")
+	tags       = flag.String("tags", "*", "comma-separated list of tags to filter the config file by - if not specified, all commands will be executed")
 
 	// Internal
 	currentTime     = time.Now().Format("15_04_05")
@@ -121,7 +123,9 @@ func main() {
 	log.Printf("Timeout: %d minutes", *timeout)
 	log.Printf("Workers: %d", *workers)
 	log.Printf("Building Batch Script...\n")
-	batScript, err := buildBatchScript(config, *nodownload)
+
+	tmpTags := strings.Split(strings.ToLower(*tags), ",")
+	batScript, err := buildBatchScript(config, *nodownload, tmpTags)
 	if err != nil {
 		log.Fatalf("Error building batch script: %v", err)
 	}

@@ -35,7 +35,7 @@ func parseConfig(configFile string) (Config, error) {
 }
 
 // buildBatchScript creates a batch script based on the commands in the config
-func buildBatchScript(c Config, nodownload bool) (string, error) {
+func buildBatchScript(c Config, nodownload bool, tagArgs []string) (string, error) {
 	batTarget := "omni_batch.bat"
 	f, err := os.Create(batTarget)
 	if err != nil {
@@ -45,7 +45,23 @@ func buildBatchScript(c Config, nodownload bool) (string, error) {
 	re := regexp.MustCompile(`file=([^|]+)`)
 	dirComponent := regexp.MustCompile(`dir=([^|]+)`)
 	cmdAfterFileRegex := regexp.MustCompile(`\|(.+)`)
+	cmdCount := 0
 	for _, v := range c.Commands {
+		tagMatch := false
+		if tagArgs[0] != "*" {
+			for _, t := range v.Tags {
+				if slices.Contains(tagArgs, strings.ToLower(t)) {
+					tagMatch = true
+					break
+				}
+			}
+		} else {
+			tagMatch = true
+		}
+		if !tagMatch {
+			continue
+		}
+
 		cmd := v.Command
 		if strings.HasPrefix(cmd, "file=") {
 			// We are dealing with a file copy inclusion
@@ -151,6 +167,10 @@ func buildBatchScript(c Config, nodownload bool) (string, error) {
 		if err != nil {
 			return "", err
 		}
+		cmdCount += 1
+	}
+	if cmdCount == 0 {
+		return "", fmt.Errorf("no commands to execute")
 	}
 	f.WriteString(fmt.Sprintf("cmd.exe /c echo 1 > C:\\Windows\\temp\\%s\n", signalFile))
 	return batTarget, nil

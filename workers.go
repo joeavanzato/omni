@@ -123,6 +123,7 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 			err := copyFile(v, targetPath)
 			if err != nil {
 				log.Printf("Error copying file %s to %s: %v", v, targetPath, err)
+				reportChan <- computerReport
 				continue
 			}
 			filesCopiedToTarget = append(filesCopiedToTarget, targetPath)
@@ -142,6 +143,7 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 		err := os.WriteFile(batchFile, batchBytes, 0644)
 		if err != nil {
 			log.Printf("Error writing batch file to %s: %v", target, err)
+			reportChan <- computerReport
 			continue
 		}
 		filesCopiedToTarget = append(filesCopiedToTarget, batchFile)

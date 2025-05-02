@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -18,6 +19,25 @@ type ComputerReport struct {
 	ResultsCollected  bool
 }
 
+type SafeCounter struct {
+	value int64
+	mutex sync.Mutex
+}
+
+func NewSafeCounter() *SafeCounter {
+	return &SafeCounter{value: 0}
+}
+func (c *SafeCounter) GetAndIncrement() int64 {
+	c.mutex.Lock()
+	current := atomic.LoadInt64(&c.value)
+	atomic.AddInt64(&c.value, 1)
+	c.mutex.Unlock()
+	return current + 1
+}
+func (c *SafeCounter) Get() int64 {
+	return atomic.LoadInt64(&c.value)
+}
+
 func startWorkers(batchFile string, targets []string, workers int, timeout int) {
 	batchBytes, err := os.ReadFile(batchFile)
 	if err != nil {
@@ -27,9 +47,10 @@ func startWorkers(batchFile string, targets []string, workers int, timeout int) 
 	var wg sync.WaitGroup
 	workerChan := make(chan string, workers)
 	reportChan := make(chan ComputerReport, workers)
+	counter := NewSafeCounter()
 	for i := 0; i < workers; i++ {
 		wg.Add(1)
-		go workerLoop(batchBytes, workerChan, &wg, reportChan, timeout)
+		go workerLoop(batchBytes, workerChan, &wg, reportChan, timeout, counter, len(targets))
 	}
 
 	var rg sync.WaitGroup
@@ -72,7 +93,7 @@ func startWorkers(batchFile string, targets []string, workers int, timeout int) 
 
 }
 
-func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, reportChan chan ComputerReport, timeout int) {
+func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, reportChan chan ComputerReport, timeout int, counter *SafeCounter, totalTargets int) {
 	defer wg.Done()
 	for {
 		target, ok := <-workerChan
@@ -91,6 +112,7 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 		}
 
 		filesCopiedToTarget := make([]string, 0)
+		log.Printf("Handling Target: %s [%d/%d]", target, counter.GetAndIncrement(), totalTargets)
 
 		// We won't establish explicit SMB connection because we are on the domain running with appropriate authentication
 		// Process can negotiate on our behalf transparently assuming we have permissions and the share is available
@@ -132,10 +154,10 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 			continue
 		}
 		computerReport.ExecutionSuccess = true
-		log.Printf("Successfully executed batch file on %s", target)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Minute)
 		tempSignalFile := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, signalFile)
+		filesCopiedToTarget = append(filesCopiedToTarget, tempSignalFile)
 		// Wait for signal file
 		done := false
 		for {
@@ -149,16 +171,6 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 				if err == nil {
 					time.Sleep(1 * time.Second)
 					computerReport.SignalFileSuccess = true
-					// Delete Signal File
-					err = os.Remove(tempSignalFile)
-					if err != nil {
-						log.Printf("Error deleting signal file %s on %s: %v", tempSignalFile, target, err)
-					}
-					// Delete Batch File
-					err = os.Remove(batchFile)
-					if err != nil {
-						log.Printf("Error deleting batch file %s on %s: %v", batchFile, target, err)
-					}
 
 					// Delete Copied Directories
 					for _, v := range dirsToCopy {

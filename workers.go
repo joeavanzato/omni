@@ -58,11 +58,14 @@ func startWorkers(batchFile string, targets []string, workers int, timeout int) 
 	rg.Add(1)
 	go func() {
 		defer rg.Done()
+		count := 0
 		for {
 			report, ok := <-reportChan
 			if !ok {
 				break
 			}
+			count += 1
+			log.Printf("Target Finished: %s [%d/%d]", report.PSComputerName, count, len(targets))
 			computerReportData[report.PSComputerName] = report
 		}
 	}()
@@ -117,16 +120,22 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 		// We won't establish explicit SMB connection because we are on the domain running with appropriate authentication
 		// Process can negotiate on our behalf transparently assuming we have permissions and the share is available
 		// Deploy auxiliary files (scripts, binaries, etc) specified in config.yaml
+		badError := false
 		for _, v := range filesToCopy {
 			targetPath := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, filepath.Base(v))
 			// Copy v to targetPath
 			err := copyFile(v, targetPath)
 			if err != nil {
 				log.Printf("Error copying file %s to %s: %v", v, targetPath, err)
-				reportChan <- computerReport
-				continue
+				badError = true
+				break
 			}
 			filesCopiedToTarget = append(filesCopiedToTarget, targetPath)
+		}
+		if badError {
+			log.Printf("Error copying files to %s, skipping target", target)
+			reportChan <- computerReport
+			continue
 		}
 		// Deploy required directories
 		for _, v := range dirsToCopy {
@@ -161,6 +170,7 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 		tempSignalFile := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, signalFile)
 		filesCopiedToTarget = append(filesCopiedToTarget, tempSignalFile)
 		// Wait for signal file
+		sentReport := false
 		done := false
 		for {
 			select {
@@ -199,6 +209,7 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 					if err != nil {
 						log.Printf("Error creating collection folder %s: %v", collectionFolder, err)
 						reportChan <- computerReport
+						sentReport = true
 						cancel()
 						continue
 					}
@@ -218,6 +229,8 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 						}
 					}
 					computerReport.ResultsCollected = true
+					reportChan <- computerReport
+					sentReport = true
 					cancel()
 				}
 			}
@@ -225,7 +238,9 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 				break
 			}
 		}
+		if !sentReport {
+			reportChan <- computerReport
+		}
 		cancel()
-		reportChan <- computerReport
 	}
 }

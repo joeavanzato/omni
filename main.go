@@ -18,11 +18,12 @@ type Config struct {
 		Note    string `yaml:"note"`
 	} `yaml:"preparations"`
 	Commands []struct {
-		Command  string     `yaml:"command"`
-		FileName string     `yaml:"file_name"`
-		Merge    MergeFuncs `yaml:"merge"`
-		ID       string     `yaml:"id"`
-		SkipDir  bool       `yaml:"skip_dir"`
+		Command     string     `yaml:"command"`
+		FileName    string     `yaml:"file_name"`
+		Merge       MergeFuncs `yaml:"merge"`
+		ID          string     `yaml:"id"`
+		SkipDir     bool       `yaml:"skip_dir"`
+		AddHostname bool       `yaml:"add_hostname"`
 	} `yaml:"commands"`
 }
 
@@ -80,6 +81,7 @@ func main() {
 	}
 
 	if *aggregate {
+		log.Printf("Skipping execution - aggregating existing results")
 		err = os.Mkdir("aggregated", 0755)
 		if err != nil && !os.IsExist(err) {
 			log.Fatalf("Error creating aggregated directory: %v", err)
@@ -91,6 +93,7 @@ func main() {
 		return
 	}
 
+	log.Printf("Gathering Target List...\n")
 	computerTargets := make([]string, 0)
 	if *targets != "all" {
 		// Check if it's a valid file-path first - if not, it must be a list of targets
@@ -116,6 +119,8 @@ func main() {
 	log.Printf("Total Target Devices: %d", len(computerTargets))
 	log.Printf("Execution Method: %s", *execMethod)
 	log.Printf("Timeout: %d minutes", *timeout)
+	log.Printf("Workers: %d", *workers)
+	log.Printf("Building Batch Script...\n")
 	batScript, err := buildBatchScript(config, *nodownload)
 	if err != nil {
 		log.Fatalf("Error building batch script: %v", err)
@@ -125,6 +130,8 @@ func main() {
 	if err != nil && !os.IsExist(err) {
 		log.Fatalf("Error creating aggregated directory: %v", err)
 	}
+	log.Printf("Starting...\n")
+	start := time.Now()
 	startWorkers(batScript, computerTargets, *workers, *timeout)
 
 	// At this point, we have data stored in devices\<target>\*
@@ -134,10 +141,13 @@ func main() {
 	if err != nil && !os.IsExist(err) {
 		log.Fatalf("Error creating aggregated directory: %v", err)
 	}
+	log.Printf("Aggregating Results...\n")
 	err = doMerges(config)
 	if err != nil {
 		log.Printf("Error merging files: %v", err)
 	}
+	log.Printf("Done!\n")
+	log.Printf("Total Time: %s\n", time.Since(start))
 
 }
 

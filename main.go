@@ -34,7 +34,7 @@ var (
 
 	// Arguments
 	configFile = flag.String("config", "config.yaml", "path to config file")
-	execMethod = flag.String("method", "wmi", "execution method (wmi)")
+	execMethod = flag.String("method", "schtasks", "execution method (wmi, schtasks)")
 	targets    = flag.String("targets", "all", "comma-separated list of targets OR file-path to line-delimited targets - if not specified, will query for all enabled computer devices")
 	workers    = flag.Int("workers", 250, "number of concurrent workers to use")
 	timeout    = flag.Int("timeout", 15, "timeout in minutes for each worker to complete")
@@ -136,7 +136,7 @@ func main() {
 	}
 	log.Printf("Starting...\n")
 	start := time.Now()
-	startWorkers(batScript, computerTargets, *workers, *timeout)
+	startWorkers(batScript, computerTargets, *workers, *timeout, *execMethod)
 
 	// At this point, we have data stored in devices\<target>\*
 	// There are a few things we want to do with this data
@@ -157,7 +157,7 @@ func main() {
 
 func parseArgs() error {
 	flag.Parse()
-	validExecutionMethods := []string{"wmi"}
+	validExecutionMethods := []string{"wmi", "schtasks"}
 	if !slices.Contains(validExecutionMethods, *execMethod) {
 		return fmt.Errorf("invalid execution method: %s", *execMethod)
 	}

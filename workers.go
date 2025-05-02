@@ -38,7 +38,7 @@ func (c *SafeCounter) Get() int64 {
 	return atomic.LoadInt64(&c.value)
 }
 
-func startWorkers(batchFile string, targets []string, workers int, timeout int) {
+func startWorkers(batchFile string, targets []string, workers int, timeout int, execMethod string) {
 	batchBytes, err := os.ReadFile(batchFile)
 	if err != nil {
 		log.Fatalf("Error reading batch file: %v", err)
@@ -50,7 +50,7 @@ func startWorkers(batchFile string, targets []string, workers int, timeout int) 
 	counter := NewSafeCounter()
 	for i := 0; i < workers; i++ {
 		wg.Add(1)
-		go workerLoop(batchBytes, workerChan, &wg, reportChan, timeout, counter, len(targets))
+		go workerLoop(batchBytes, workerChan, &wg, reportChan, timeout, counter, len(targets), execMethod)
 	}
 
 	var rg sync.WaitGroup
@@ -96,7 +96,7 @@ func startWorkers(batchFile string, targets []string, workers int, timeout int) 
 
 }
 
-func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, reportChan chan ComputerReport, timeout int, counter *SafeCounter, totalTargets int) {
+func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, reportChan chan ComputerReport, timeout int, counter *SafeCounter, totalTargets int, execMethod string) {
 	defer wg.Done()
 	for {
 		target, ok := <-workerChan
@@ -158,11 +158,21 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 		filesCopiedToTarget = append(filesCopiedToTarget, batchFile)
 		computerReport.FilesCopied = true
 		// Execute Batch
-		err = executeRemoteWMI(target, fmt.Sprintf("cmd.exe /c %s", batchFile), "C:\\Windows\\temp", "", "", "")
-		if err != nil {
-			log.Printf("Error executing batch file on %s: %v", target, err)
-			reportChan <- computerReport
-			continue
+		taskName := fmt.Sprintf("omni_launcher_%s", currentTime)
+		if execMethod == "wmi" {
+			err = executeRemoteWMI(target, fmt.Sprintf("cmd.exe /c %s", batchFile), "C:\\Windows\\temp", "", "", "")
+			if err != nil {
+				log.Printf("Error executing batch file on %s: %v", target, err)
+				reportChan <- computerReport
+				continue
+			}
+		} else if execMethod == "schtasks" {
+			err = runTask(target, fmt.Sprintf("cmd.exe /c %s", batchFile), taskName)
+			if err != nil {
+				log.Printf("Error executing batch file on %s: %v", target, err)
+				reportChan <- computerReport
+				continue
+			}
 		}
 		computerReport.ExecutionSuccess = true
 
@@ -200,6 +210,13 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 						if err != nil {
 							log.Printf("Error deleting file %s: %v", v, err)
 							continue
+						}
+					}
+
+					if execMethod == "schtasks" {
+						err = deleteTask(target, taskName)
+						if err != nil {
+							log.Printf("Error deleting task %s on %s: %v", taskName, target, err)
 						}
 					}
 

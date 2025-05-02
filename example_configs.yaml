@@ -1,0 +1,17 @@
+commands:
+  # Example KAPE Usage, assuming Kape and all targets are stored in .\KAPE relative to omni.exe - could also specify a Fully Qualified Path
+  - command: dir=KAPE | C:\windows\temp\kape\kape.exe --tsource C --tdest C:\Windows\temp\kape\machine\ --tflush --target !SANS_Triage --zip kape && powershell.exe -Command "$kapezip = Get-ChildItem -Path C:\Windows\temp\kape\machine\*.zip; Rename-Item -Path $kapezip.FullName -NewName '$FILENAME$'"
+    file_name: $time$_kape.zip
+    merge: pool
+    id: kape
+    add_hostname: True
+  # Example arbitrary binary deployment/use
+  - command: file=my_custom_tool.exe | C:\windows\temp\my_custom_tool.exe -someparameter -outputpath $FILENAME$
+    file_name: $time$_mytool.csv
+    merge: csv
+    id: mytool
+  # Example arbitrary PowerShell script deployment
+  - command: file=my_script.ps1 | powershell.exe C:\Windows\temp\my_script.ps1 -someparam -output $FILENAME$
+    file_name: $time$_myscript.csv
+    merge: csv
+    id: myscript

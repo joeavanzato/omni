@@ -13,10 +13,11 @@ import (
 
 type MergeFuncs string
 
-var validMergeFuncs = []MergeFuncs{MergeFuncCSV}
+var validMergeFuncs = []MergeFuncs{MergeFuncCSV, MergeFuncNone}
 
 const (
-	MergeFuncCSV MergeFuncs = "csv"
+	MergeFuncCSV  MergeFuncs = "csv"
+	MergeFuncNone MergeFuncs = "none"
 )
 
 func doMerges(c Config) error {

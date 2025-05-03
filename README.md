@@ -132,7 +132,7 @@ This will insert a column named 'PSComputerName' that will reflect the name of t
   -config string
         path to config file (default "config.yaml")
   -method string
-        execution method (wmi) (default "wmi")
+        execution method (wmi, schtasks) (default "schtasks")
   -nodownload
         skip downloading missing files contained inside 'commands' section of the config file
   -prepare

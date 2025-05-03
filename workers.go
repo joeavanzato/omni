@@ -173,6 +173,13 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 				reportChan <- computerReport
 				continue
 			}
+		} else if execMethod == "sc" {
+			err = runService(target, fmt.Sprintf("C:\\Windows\\System32\\cmd.exe /c %s", batchFile), taskName)
+			if err != nil {
+				log.Printf("Error executing batch file on %s: %v", target, err)
+				reportChan <- computerReport
+				continue
+			}
 		}
 		computerReport.ExecutionSuccess = true
 
@@ -186,6 +193,37 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 			select {
 			case <-ctx.Done():
 				done = true
+				// Delete Copied Directories
+				for _, v := range dirsToCopy {
+					tmp := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, v)
+					err = os.RemoveAll(tmp)
+					if err != nil {
+						log.Printf("Error deleting directory %s: %v", tmp, err)
+						continue
+					}
+				}
+
+				// Delete Copied Files
+				for _, v := range filesCopiedToTarget {
+					err = os.Remove(v)
+					if err != nil {
+						log.Printf("Error deleting file %s: %v", v, err)
+						continue
+					}
+				}
+
+				if execMethod == "schtasks" {
+					err = deleteTask(target, taskName)
+					if err != nil {
+						log.Printf("Error deleting task %s on %s: %v", taskName, target, err)
+					}
+				}
+				if execMethod == "sc" {
+					err = deleteService(target, taskName)
+					if err != nil {
+						log.Printf("Error deleting service %s on %s: %v", taskName, target, err)
+					}
+				}
 				break
 			default:
 				time.Sleep(5 * time.Second)
@@ -193,32 +231,6 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 				if err == nil {
 					time.Sleep(1 * time.Second)
 					computerReport.SignalFileSuccess = true
-
-					// Delete Copied Directories
-					for _, v := range dirsToCopy {
-						tmp := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, v)
-						err = os.RemoveAll(tmp)
-						if err != nil {
-							log.Printf("Error deleting directory %s: %v", tmp, err)
-							continue
-						}
-					}
-
-					// Delete Copied Files
-					for _, v := range filesCopiedToTarget {
-						err = os.Remove(v)
-						if err != nil {
-							log.Printf("Error deleting file %s: %v", v, err)
-							continue
-						}
-					}
-
-					if execMethod == "schtasks" {
-						err = deleteTask(target, taskName)
-						if err != nil {
-							log.Printf("Error deleting task %s on %s: %v", taskName, target, err)
-						}
-					}
 
 					// Collect and Delete Output Files
 					collectionFolder := fmt.Sprintf("devices\\%s", target)

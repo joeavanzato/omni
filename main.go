@@ -10,8 +10,6 @@ import (
 	"time"
 )
 
-// TODO - Alternate execution mechanisms
-
 type Config struct {
 	Preparations []struct {
 		Command string `yaml:"command"`
@@ -34,7 +32,7 @@ var (
 
 	// Arguments
 	configFile = flag.String("config", "config.yaml", "path to config file")
-	execMethod = flag.String("method", "schtasks", "execution method (wmi, schtasks)")
+	execMethod = flag.String("method", "schtasks", "execution method (wmi, schtasks, sc)")
 	targets    = flag.String("targets", "all", "comma-separated list of targets OR file-path to line-delimited targets - if not specified, will query for all enabled computer devices")
 	workers    = flag.Int("workers", 250, "number of concurrent workers to use")
 	timeout    = flag.Int("timeout", 15, "timeout in minutes for each worker to complete")
@@ -157,9 +155,12 @@ func main() {
 
 func parseArgs() error {
 	flag.Parse()
-	validExecutionMethods := []string{"wmi", "schtasks"}
+	validExecutionMethods := []string{"wmi", "schtasks", "sc"}
 	if !slices.Contains(validExecutionMethods, *execMethod) {
 		return fmt.Errorf("invalid execution method: %s", *execMethod)
+	}
+	if *execMethod == "sc" {
+		return fmt.Errorf("exec method 'sc' is not fully supported yet")
 	}
 	return nil
 }

@@ -12,6 +12,8 @@ omni helps incident responders rapidly aggregate information from domain-joined 
 
 The main focus is on collecting light-weight datasets as quickly as possible to help responders identify anomalies and quickly hunt known-bad indicators across a network - but technically it is possible to execute and collect any type of evidence using any type of host-based tooling.
 
+If you find yourself in a situation where you need to pivot on indicators of compromise (IPs, Filenames, Processes, User Activity, Service/Task Names, etc) in a cyber-immature network (lack of EDR, SIEM, Logging, etc), omni can help you get answers.
+
 It is easy to collect new data by modifying config.yaml on the fly to run scripts, commands or tools on remote devices.
 
 It works by dynamically building a batch file that is deployed to targets along with any specified files and directories - this batch file controls execution and is remotely executed via schtasks by default - output files are then retrieved via SMB and deployed artifacts are cleaned-up from each target.

@@ -2,7 +2,9 @@
     [Parameter(Mandatory = $true)]
     [string]$directory,
     [Parameter(Mandatory = $false)]
-    [string]$outputFile = (Join-Path $directory 'Merged.csv')
+    [string]$outputFile = (Join-Path $directory 'Merged.csv'),
+    [Parameter(Mandatory = $false)]
+    [switch]$addhostname = $false
 )
 
 Set-StrictMode -Version Latest
@@ -18,7 +20,12 @@ if ($csvFiles.Count -eq 0) {
 }
 $allHeaders = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
 
-$standardColumns = @("PSComputerName","SourceFileName")
+
+if ($addhostname){
+    $standardColumns = @("PSComputerName","SourceFileName")
+} else {
+    $standardColumns = @("SourceFileName")
+}
 foreach ($col in $standardColumns) {
     [void]$allHeaders.Add($col)
 }
@@ -51,7 +58,9 @@ foreach ($file in $csvFiles) {
         $csvData = Import-Csv -Path $file.FullName
         foreach ($dataRow in $csvData) {
             $rowData = [ordered]@{}
-            $rowData["PSComputerName"] = $computerName
+            if ($addhostname){
+                $rowData["PSComputerName"] = $computerName
+            }
             $rowData["SourceFileName"] = $file.Name
             
             foreach ($header in $dataColumns) {

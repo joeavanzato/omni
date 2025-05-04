@@ -115,7 +115,16 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 		}
 
 		filesCopiedToTarget := make([]string, 0)
+		dirsCopiedToTarget := make([]string, 0) // actually needed?
 		log.Printf("Handling Target: %s [%d/%d]", target, counter.GetAndIncrement(), totalTargets)
+
+		// Make C:\Windows\Temp if it does not already exist for some reason
+		err := os.Mkdir(fmt.Sprintf("\\\\%s\\C$\\Windows\\temp", target), os.ModeDir)
+		if err != nil && !os.IsExist(err) {
+			log.Printf("Error creating temp directory %s: %v", target, err)
+			reportChan <- computerReport
+			continue
+		}
 
 		// We won't establish explicit SMB connection because we are on the domain running with appropriate authentication
 		// Process can negotiate on our behalf transparently assuming we have permissions and the share is available
@@ -145,11 +154,12 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 				log.Printf("Error copying directory %s to %s: %v", v, targetPath, err)
 				continue
 			}
+			dirsCopiedToTarget = append(dirsCopiedToTarget, targetPath)
 		}
 
 		// Deploy Batch
 		batchFile := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s_omni.bat", target, currentTime)
-		err := os.WriteFile(batchFile, batchBytes, 0644)
+		err = os.WriteFile(batchFile, batchBytes, 0644)
 		if err != nil {
 			log.Printf("Error writing batch file to %s: %v", target, err)
 			reportChan <- computerReport
@@ -197,7 +207,7 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 				for _, v := range dirsToCopy {
 					tmp := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, v)
 					err = os.RemoveAll(tmp)
-					if err != nil {
+					if err != nil && !os.IsNotExist(err) {
 						log.Printf("Error deleting directory %s: %v", tmp, err)
 						continue
 					}
@@ -206,7 +216,7 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 				// Delete Copied Files
 				for _, v := range filesCopiedToTarget {
 					err = os.Remove(v)
-					if err != nil {
+					if err != nil && !os.IsNotExist(err) {
 						log.Printf("Error deleting file %s: %v", v, err)
 						continue
 					}
@@ -247,8 +257,10 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 						collectionFile := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, v)
 						destinationFile := fmt.Sprintf("%s\\%s", collectionFolder, v)
 						err = copyFile(collectionFile, destinationFile)
-						if err != nil {
+						if err != nil && !os.IsNotExist(err) {
 							log.Printf("Error copying file %s to %s: %v", collectionFile, destinationFile, err)
+							continue
+						} else if err != nil && os.IsNotExist(err) {
 							continue
 						}
 						err = os.Remove(collectionFile)
@@ -257,6 +269,24 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 							continue
 						}
 					}
+
+					for _, v := range collectionDirs {
+						collectionDir := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, v)
+						destinationDir := fmt.Sprintf("%s\\%s", collectionFolder, v)
+						err = copyDirectory(collectionDir, destinationDir)
+						if err != nil && !os.IsNotExist(err) {
+							log.Printf("Error copying directory %s to %s: %v", collectionDir, destinationDir, err)
+							continue
+						} else if err != nil && os.IsNotExist(err) {
+							continue
+						}
+						err = os.RemoveAll(collectionDir)
+						if err != nil {
+							log.Printf("Error deleting directory %s: %v", collectionDir, err)
+							continue
+						}
+					}
+
 					computerReport.ResultsCollected = true
 					reportChan <- computerReport
 					sentReport = true

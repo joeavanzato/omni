@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"slices"
 	"strings"
@@ -42,9 +41,6 @@ func buildBatchScript(c Config, nodownload bool, tagArgs []string) (string, erro
 		return "", err
 	}
 	defer f.Close()
-	re := regexp.MustCompile(`file=([^|]+)`)
-	dirComponent := regexp.MustCompile(`dir=([^|]+)`)
-	cmdAfterFileRegex := regexp.MustCompile(`\|(.+)`)
 	cmdCount := 0
 	for _, v := range c.Commands {
 		tagMatch := false
@@ -63,106 +59,71 @@ func buildBatchScript(c Config, nodownload bool, tagArgs []string) (string, erro
 		}
 
 		cmd := v.Command
-		if strings.HasPrefix(cmd, "file=") {
-			// We are dealing with a file copy inclusion
-			// Is it a network path or local file?
-			match := re.FindStringSubmatch(cmd)
-			file := ""
-			if len(match) > 1 {
-				file = match[1]
-			} else {
-				log.Printf("error parsing file copy command, missing pipe?: %s", cmd)
-				continue
-			}
-			match = cmdAfterFileRegex.FindStringSubmatch(cmd)
-			if len(match) > 1 {
-				cmd = strings.TrimSpace(match[1])
-			} else {
-				log.Printf("error parsing followup command, missing pipe?: %s", cmd)
-				continue
-			}
-			file = strings.TrimSpace(file)
-			files := strings.Split(file, ",")
-			tempFilesToCopy := make([]string, 0)
-			anyError := false
-			for _, j := range files {
-				if anyError {
-					break
-				}
-				tmpFile := strings.TrimSpace(j)
-				if strings.HasPrefix(tmpFile, "http") {
-					// Download the file via HTTP/HTTPS depending
-					destFileName := filepath.Base(tmpFile)
-					if _, err = os.Stat(destFileName); errors.Is(err, os.ErrNotExist) {
-						if nodownload {
-							log.Printf("file %s does not exist and skipping download", destFileName)
-							anyError = true
-							continue
-						}
-						log.Printf("downloading file %s to %s", file, destFileName)
-						_, err = downloadFile(file, destFileName)
-						if err != nil {
-							log.Printf("Error downloading file %s to %s: %v", file, destFileName, err)
-							anyError = true
-							continue
-						}
-						tempFilesToCopy = append(tempFilesToCopy, destFileName)
-					} else {
-						log.Printf("file %s already exists, skipping download", destFileName)
-						tempFilesToCopy = append(tempFilesToCopy, destFileName)
-					}
-				} else {
-					// It's a local file - verify it exists
-					_, err = os.Stat(tmpFile)
-					if err != nil {
-						log.Printf("error checking file exists for id %s: %s, %v", v.ID, file, err)
+		tempFilesToCopy := make([]string, 0)
+		tempDirsToCopy := make([]string, 0)
+		anyError := false
+		for _, j := range v.Dependencies {
+			tmpFile := strings.TrimSpace(j)
+			if strings.HasPrefix(tmpFile, "http") {
+				// Download the file via HTTP/HTTPS depending
+				destFileName := filepath.Base(tmpFile)
+				if _, err = os.Stat(destFileName); errors.Is(err, os.ErrNotExist) {
+					if nodownload {
+						log.Printf("file %s does not exist and skipping download", destFileName)
 						anyError = true
-						continue
+						break
+					}
+					log.Printf("downloading file %s to %s", tmpFile, destFileName)
+					_, err = downloadFile(tmpFile, destFileName)
+					if err != nil {
+						log.Printf("Error downloading file %s to %s: %v", tmpFile, destFileName, err)
+						anyError = true
+						break
+					}
+					tempFilesToCopy = append(tempFilesToCopy, destFileName)
+				} else {
+					log.Printf("file %s already exists, skipping download", destFileName)
+					tempFilesToCopy = append(tempFilesToCopy, destFileName)
+				}
+			} else {
+				// Local Reference, verify it exists and determine if it's a file or directory
+				st, err := os.Stat(tmpFile)
+				if err != nil {
+					log.Printf("error checking path exists for id %s: %s, %v", v.ID, tmpFile, err)
+					anyError = true
+					break
+				} else {
+					log.Printf("found path %s", tmpFile)
+					if st.IsDir() {
+						tempDirsToCopy = append(tempDirsToCopy, tmpFile)
 					} else {
-						log.Printf("found file %s", tmpFile)
 						tempFilesToCopy = append(tempFilesToCopy, tmpFile)
 					}
 				}
 			}
-
-			if !anyError {
-				for _, q := range tempFilesToCopy {
-					filesToCopy = append(filesToCopy, q)
-				}
+		}
+		if !anyError {
+			for _, q := range tempFilesToCopy {
+				filesToCopy = append(filesToCopy, q)
 			}
-		} else if strings.HasPrefix(cmd, "dir=") {
-			// If dir exists, copy it to C:\Windows\temp on remote
-			//
-			match := dirComponent.FindStringSubmatch(cmd)
-			dir := ""
-			if len(match) > 1 {
-				dir = match[1]
-			} else {
-				log.Printf("error parsing dir copy command, missing pipe?: %s", cmd)
-				continue
+			for _, q := range tempDirsToCopy {
+				dirsToCopy = append(dirsToCopy, q)
 			}
-			dir = strings.TrimSpace(dir)
-			match = cmdAfterFileRegex.FindStringSubmatch(cmd)
-			if len(match) > 1 {
-				cmd = strings.TrimSpace(match[1])
-			} else {
-				log.Printf("error parsing followup command, missing pipe?: %s", cmd)
-				continue
-			}
-			if _, err = os.Stat(dir); errors.Is(err, os.ErrNotExist) {
-				log.Printf("specified dir does not exist for id %s: %s, %v", v.ID, dir, err)
-				continue
-			} else {
-				log.Printf("dir %s exists, adding to copy list", dir)
-				if !slices.Contains(dirsToCopy, dir) {
-					dirsToCopy = append(dirsToCopy, dir)
-				}
-			}
+		} else {
+			log.Printf("Skipping command %s due to dependency errors", v.ID)
+			continue
 		}
 
-		fileName := doFileNameReplacements(v.FileName)
-		collectionFiles = append(collectionFiles, fileName)
-		cmd = doCmdReplacements(cmd, fileName, v.SkipDir)
+		fileName := doNameReplacements(v.FileName)
+		dirName := doNameReplacements(v.DirName)
+		if v.FileName != "" {
+			collectionFiles = append(collectionFiles, fileName)
+		}
+		if v.DirName != "" {
+			collectionDirs = append(collectionDirs, dirName)
+		}
+		cmd = doCmdReplacements(cmd, fileName, v.SkipDir, dirName)
+		commandsExecuting = append(commandsExecuting, v)
 		_, err := f.WriteString(fmt.Sprintf("start /b /wait cmd.exe /c %s\n", cmd))
 		if err != nil {
 			return "", err
@@ -176,19 +137,20 @@ func buildBatchScript(c Config, nodownload bool, tagArgs []string) (string, erro
 	return batTarget, nil
 }
 
-// doFileNameReplacements replaces the placeholders in file names with actual values
-func doFileNameReplacements(fileName string) string {
-	fileName = strings.ReplaceAll(fileName, "$time$", currentTime)
-	return fileName
+// doNameReplacements replaces the placeholders in file names with actual values
+func doNameReplacements(name string) string {
+	name = strings.ReplaceAll(name, "$time$", currentTime)
+	return name
 }
 
 // doCmdReplacements replaces the placeholders in commands with actual values
-func doCmdReplacements(cmd string, filename string, skipdir bool) string {
+func doCmdReplacements(cmd string, filename string, skipdir bool, dirname string) string {
 	if skipdir {
 		cmd = strings.ReplaceAll(cmd, "$FILENAME$", fmt.Sprintf("%s", filename))
 	} else {
 		cmd = strings.ReplaceAll(cmd, "$FILENAME$", fmt.Sprintf("C:\\Windows\\temp\\%s", filename))
 	}
+	cmd = strings.ReplaceAll(cmd, "$DIRNAME$", dirname)
 	return cmd
 }
 
@@ -220,7 +182,7 @@ func copyDirectory(srcDir, dstDir string) error {
 	// Get a list of all entries in the source directory
 	entries, err := os.ReadDir(srcDir)
 	if err != nil {
-		return fmt.Errorf("error reading source directory: %w", err)
+		return err
 	}
 
 	// Iterate through all entries
@@ -295,14 +257,17 @@ func validateConfig(c Config) error {
 		if !slices.Contains(validMergeFuncs, v.Merge) {
 			return fmt.Errorf("id: %s, invalid merge function: %s", v.ID, v.Merge)
 		}
-		if v.FileName == "" {
-			return fmt.Errorf("id: %s, file name cannot be empty", v.ID)
+		if v.FileName == "" && v.DirName == "" {
+			return fmt.Errorf("id: %s, must specify one of file_name/dir_name", v.ID)
 		}
-		if !strings.Contains(v.Command, "$FILENAME$") {
-			return fmt.Errorf("id: %s, command must contain $FILENAME$ placeholder", v.ID)
+		if !strings.Contains(v.Command, "$FILENAME$") && !strings.Contains(v.Command, "$DIRNAME$") {
+			return fmt.Errorf("id: %s, command must contain $FILENAME$ or $DIRNAME$ placeholder", v.ID)
 		}
 		if strings.Contains(v.FileName, " ") {
 			return fmt.Errorf("id: %s, file name cannot contain spaces", v.ID)
+		}
+		if strings.Contains(v.DirName, " ") {
+			return fmt.Errorf("id: %s, dir name cannot contain spaces", v.ID)
 		}
 	}
 	return nil

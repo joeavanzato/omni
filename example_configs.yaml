@@ -1,3 +1,4 @@
+# These can be copy-pasted into config.yaml or multiple configs can be created based on your specific needs/requirements for different levels of data collection
 commands:
   # Example KAPE Usage, assuming Kape and all targets are stored in .\KAPE relative to omni.exe - could also specify a Fully Qualified Path
   - command: dir=KAPE | C:\windows\temp\kape\kape.exe --tsource C --tdest C:\Windows\temp\kape\machine\ --tflush --target !SANS_Triage --zip kape && powershell.exe -Command "$kapezip = Get-ChildItem -Path C:\Windows\temp\kape\machine\*.zip; Rename-Item -Path $kapezip.FullName -NewName '$FILENAME$'"
@@ -20,3 +21,21 @@ commands:
     file_name: $time$_myscript.csv
     merge: csv
     id: myscript
+  # Additional EZTool Example Configs
+  # MFTECmd
+  - command: file=net6\MFTECmd.dll,net6\MFTECmd.exe | C:\Windows\Temp\MFTECmd.exe -f C:\$MFT --csv C:\Windows\temp --csvf $FILENAME$
+    file_name: $time$_$MFT.csv
+    merge: none
+    id: MFTECmd_$MFT
+  # LECmd
+  - command: file=net6\LECmd.dll,net6\LECmd.exe | C:\Windows\Temp\LECmd.exe -q -d C:\Users --csv C:\Windows\temp --csvf $FILENAME$
+    file_name: $time$_LECmd.csv
+    merge: csv
+    id: LECmd
+    add_hostname: true
+  # JLECmd
+  - command: file=net6\JLECmd.dll,net6\JLECmd.exe | C:\Windows\Temp\JLECmd.exe -q -d C:\Users --csv C:\Windows\temp --csvf $FILENAME$
+    file_name: $time$_JLECmd.csv
+    merge: csv
+    id: JLECmd
+    add_hostname: true

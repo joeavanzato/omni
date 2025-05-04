@@ -11,6 +11,8 @@ import (
 )
 
 // TODO - ZIP files/dirs to copy for quicker transfer and unpack on target machines with PowerShell preamble
+// TODO - Convert long YAML to multiline for readability
+// TODO - Allow specification of specific command to run by ID
 
 type Config struct {
 	Preparations []struct {
@@ -24,7 +26,7 @@ type Command struct {
 	Command      string     `yaml:"command"`      // The command to execute
 	FileName     string     `yaml:"file_name"`    // Used to replace $FILENAME$ in cmdline for retrieval/execution
 	DirName      string     `yaml:"dir_name"`     // Used to replace $DIRNAME$ in cmdline for retrieval/execution
-	Merge        MergeFuncs `yaml:"merge"`        // Specifes how, if at all, output files should be merged
+	Merge        MergeFuncs `yaml:"merge"`        // Specifies how, if at all, output files should be merged
 	ID           string     `yaml:"id"`           // Unique ID for the command
 	SkipDir      bool       `yaml:"skip_dir"`     // If true, $FILENAME$ will not have C:\Windows\Temp added
 	AddHostname  bool       `yaml:"add_hostname"` // When merging, should we add a hostname column (PSComputerName) - for outputs where it may not be possible to include in the file directly

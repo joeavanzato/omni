@@ -6,7 +6,7 @@
 
 ### What is it?
 
-- An open-source, modular, extensible utility for collecting evidence via commands, scripts and files from remote Windows devices to enhance the efficiency of Incident Responders
+- An open-source, modular, extensible utility for collecting evidence from on-prem Windows computers via commands, scripts and files to enhance the efficiency of Incident Responders
 
 omni helps incident responders rapidly aggregate information from domain-joined devices across an enterprise network.
 
@@ -26,7 +26,7 @@ omni can receive a list of targets at the command-line, via a line-delimited fil
 ### Example Usage
 ```
 omni.exe
-- Will launch omni with all targets from config.yaml and default timeout/worker settings using WMI and will query AD for targets
+- Launch omni with all targets from .\config.yaml and default timeout (15)/worker (250) settings using WMI and will query AD for targets
 
 omni.exe -workers 500 -timeout 30 -tags quick,process
 - Add more workers, increase the timeout duration per-target and only use configurations with the specified tags
@@ -44,7 +44,7 @@ omni.exe -method task
 The configuration file controls omni's behavior - it is a YAML file that specifies commands to run, files/directories to copy, tools to prepare/download, etc.
 
 config.yaml can specify individual commands to execute - each of which are loaded into a batch file and prefixed with cmd.exe /c - for example:
-```
+```yaml
 command: powershell.exe -Command "Get-WmiObject -Class Win32_StartupCommand -Locale MS_409 -ErrorAction SilentlyContinue | Select PSComputerName,Caption,Command,Description,Location,Name,User,UserSID | Export-Csv -Path '$FILENAME$' -NoTypeInformation"
 file_name: $time$_wmi_startups.csv
 merge: csv
@@ -54,49 +54,95 @@ tags: [quick, persistence]
 
 We can also specify files - locally or remotely, that are to be copied to the target device for further use - such as copying a complex PowerShell script to execute:
 
-```
-command: file=https://raw.githubusercontent.com/joeavanzato/trawler/master/trawler.ps1 | powershell.exe -Command "Add-MpPreference -ExclusionPath "C:\Windows\Temp\trawler.ps1" -Force" & powershell.exe C:\Windows\temp\trawler.ps1 -csvfilename '$FILENAME$' -OutputLocation 'C:\Windows\temp' -ScanOptions ActiveSetup,AMSIProviders,AppCertDLLs,AppInitDLLs,ApplicationShims,AppPaths,AssociationHijack,AutoDialDLL,BIDDll,BITS,BootVerificationProgram,COMHijacks,CommandAutoRunProcessors,Connections,ContextMenu,ChromiumExtensions,DebuggerHijacks,DNSServerLevelPluginDLL,DisableLowIL,DirectoryServicesRestoreMode,DiskCleanupHandlers,ErrorHandlerCMD,ExplorerHelperUtilities,FolderOpen,GPOExtensions,GPOScripts,HTMLHelpDLL,IFEO,InstalledSoftware,InternetSettingsLUIDll,KnownManagedDebuggers,LNK,LSA,MicrosoftTelemetryCommands,ModifiedWindowsAccessibilityFeature,MSDTCDll,Narrator,NaturalLanguageDevelopmentDLLs,NetSHDLLs,NotepadPPPlugins,OfficeAI,OfficeGlobalDotName,Officetest,OfficeTrustedLocations,OfficeTrustedDocuments,OutlookStartup,PATHHijacks,PeerDistExtensionDll,PolicyManager,PowerShellProfiles,PrintMonitorDLLs,PrintProcessorDLLs,RATS,RDPShadowConsent,RDPStartupPrograms,RemoteUACSetting,ScheduledTasks,ScreenSaverEXE,ServiceControlManagerSD,SEMgrWallet,ServiceHijacks,Services,SethcHijack,SilentProcessExitMonitoring,Startups,SuspiciousFileLocation,TerminalProfiles,TerminalServicesDLL,TerminalServicesInitialProgram,TimeProviderDLLs,TrustProviderDLL,UninstallStrings,UserInitMPRScripts,Users,UtilmanHijack,WellKnownCOM,WERRuntimeExceptionHandlers,WindowsLoadKey,WindowsUnsignedFiles,WindowsUpdateTestDlls,WinlogonHelperDLLs,WMIConsumers,Wow64LayerAbuse,WSL & powershell.exe -Command "Remove-MpPreference -ExclusionPath "C:\Windows\Temp\trawler.ps1" -Force"
+```yaml
+command: powershell.exe -Command "Add-MpPreference -ExclusionPath "C:\Windows\Temp\trawler.ps1" -Force" & powershell.exe C:\Windows\temp\trawler.ps1 -csvfilename '$FILENAME$' -OutputLocation 'C:\Windows\temp' -ScanOptions ActiveSetup,AMSIProviders,AppCertDLLs,AppInitDLLs,ApplicationShims,AppPaths,AssociationHijack,AutoDialDLL,BIDDll,BITS,BootVerificationProgram,COMHijacks,CommandAutoRunProcessors,Connections,ContextMenu,ChromiumExtensions,DebuggerHijacks,DNSServerLevelPluginDLL,DisableLowIL,DirectoryServicesRestoreMode,DiskCleanupHandlers,ErrorHandlerCMD,ExplorerHelperUtilities,FolderOpen,GPOExtensions,GPOScripts,HTMLHelpDLL,IFEO,InstalledSoftware,InternetSettingsLUIDll,KnownManagedDebuggers,LNK,LSA,MicrosoftTelemetryCommands,ModifiedWindowsAccessibilityFeature,MSDTCDll,Narrator,NaturalLanguageDevelopmentDLLs,NetSHDLLs,NotepadPPPlugins,OfficeAI,OfficeGlobalDotName,Officetest,OfficeTrustedLocations,OfficeTrustedDocuments,OutlookStartup,PATHHijacks,PeerDistExtensionDll,PolicyManager,PowerShellProfiles,PrintMonitorDLLs,PrintProcessorDLLs,RATS,RDPShadowConsent,RDPStartupPrograms,RemoteUACSetting,ScheduledTasks,ScreenSaverEXE,ServiceControlManagerSD,SEMgrWallet,ServiceHijacks,Services,SethcHijack,SilentProcessExitMonitoring,Startups,SuspiciousFileLocation,TerminalProfiles,TerminalServicesDLL,TerminalServicesInitialProgram,TimeProviderDLLs,TrustProviderDLL,UninstallStrings,UserInitMPRScripts,Users,UtilmanHijack,WellKnownCOM,WERRuntimeExceptionHandlers,WindowsLoadKey,WindowsUnsignedFiles,WindowsUpdateTestDlls,WinlogonHelperDLLs,WMIConsumers,Wow64LayerAbuse,WSL & powershell.exe -Command "Remove-MpPreference -ExclusionPath "C:\Windows\Temp\trawler.ps1" -Force"
 file_name: $time$_trawler.csv
 merge: csv
 id: trawler
+tags: [persistence]
+dependencies: [https://raw.githubusercontent.com/joeavanzato/Trawler/refs/heads/main/trawler.ps1]
 ```
 
-This configuration tells omni attempt to download the specified file using the base name (trawler.ps1) and then add the remainder (after the first |) to the batch file as a normal command - just make sure the binary/script allows for exporting to custom filenames - otherwise pipe the output.
+This configuration tells omni attempt to download the specified file on our analysis machine using the base name (trawler.ps1) for copying to remote targets.
 
 We also could have it specify a local file to copy if we don't want to invoke http requests to download something on our main device / can't download anything.
 
-```
-command: file=trawler.ps1 | powershell.exe -Command "Add-MpPreference -ExclusionPath "C:\Windows\Temp\trawler.ps1" -Force" & powershell.exe C:\Windows\temp\trawler.ps1 -csvfilename '$FILENAME$' -OutputLocation 'C:\Windows\temp' -ScanOptions ActiveSetup,AMSIProviders,AppCertDLLs,AppInitDLLs,ApplicationShims,AppPaths,AssociationHijack,AutoDialDLL,BIDDll,BITS,BootVerificationProgram,COMHijacks,CommandAutoRunProcessors,Connections,ContextMenu,ChromiumExtensions,DebuggerHijacks,DNSServerLevelPluginDLL,DisableLowIL,DirectoryServicesRestoreMode,DiskCleanupHandlers,ErrorHandlerCMD,ExplorerHelperUtilities,FolderOpen,GPOExtensions,GPOScripts,HTMLHelpDLL,IFEO,InstalledSoftware,InternetSettingsLUIDll,KnownManagedDebuggers,LNK,LSA,MicrosoftTelemetryCommands,ModifiedWindowsAccessibilityFeature,MSDTCDll,Narrator,NaturalLanguageDevelopmentDLLs,NetSHDLLs,NotepadPPPlugins,OfficeAI,OfficeGlobalDotName,Officetest,OfficeTrustedLocations,OfficeTrustedDocuments,OutlookStartup,PATHHijacks,PeerDistExtensionDll,PolicyManager,PowerShellProfiles,PrintMonitorDLLs,PrintProcessorDLLs,RATS,RDPShadowConsent,RDPStartupPrograms,RemoteUACSetting,ScheduledTasks,ScreenSaverEXE,ServiceControlManagerSD,SEMgrWallet,ServiceHijacks,Services,SethcHijack,SilentProcessExitMonitoring,Startups,SuspiciousFileLocation,TerminalProfiles,TerminalServicesDLL,TerminalServicesInitialProgram,TimeProviderDLLs,TrustProviderDLL,UninstallStrings,UserInitMPRScripts,Users,UtilmanHijack,WellKnownCOM,WERRuntimeExceptionHandlers,WindowsLoadKey,WindowsUnsignedFiles,WindowsUpdateTestDlls,WinlogonHelperDLLs,WMIConsumers,Wow64LayerAbuse,WSL & powershell.exe -Command "Remove-MpPreference -ExclusionPath "C:\Windows\Temp\trawler.ps1" -Force"
+```yaml
+command: powershell.exe -Command "Add-MpPreference -ExclusionPath "C:\Windows\Temp\trawler.ps1" -Force" & powershell.exe C:\Windows\temp\trawler.ps1 -csvfilename '$FILENAME$' -OutputLocation 'C:\Windows\temp' -ScanOptions ActiveSetup,AMSIProviders,AppCertDLLs,AppInitDLLs,ApplicationShims,AppPaths,AssociationHijack,AutoDialDLL,BIDDll,BITS,BootVerificationProgram,COMHijacks,CommandAutoRunProcessors,Connections,ContextMenu,ChromiumExtensions,DebuggerHijacks,DNSServerLevelPluginDLL,DisableLowIL,DirectoryServicesRestoreMode,DiskCleanupHandlers,ErrorHandlerCMD,ExplorerHelperUtilities,FolderOpen,GPOExtensions,GPOScripts,HTMLHelpDLL,IFEO,InstalledSoftware,InternetSettingsLUIDll,KnownManagedDebuggers,LNK,LSA,MicrosoftTelemetryCommands,ModifiedWindowsAccessibilityFeature,MSDTCDll,Narrator,NaturalLanguageDevelopmentDLLs,NetSHDLLs,NotepadPPPlugins,OfficeAI,OfficeGlobalDotName,Officetest,OfficeTrustedLocations,OfficeTrustedDocuments,OutlookStartup,PATHHijacks,PeerDistExtensionDll,PolicyManager,PowerShellProfiles,PrintMonitorDLLs,PrintProcessorDLLs,RATS,RDPShadowConsent,RDPStartupPrograms,RemoteUACSetting,ScheduledTasks,ScreenSaverEXE,ServiceControlManagerSD,SEMgrWallet,ServiceHijacks,Services,SethcHijack,SilentProcessExitMonitoring,Startups,SuspiciousFileLocation,TerminalProfiles,TerminalServicesDLL,TerminalServicesInitialProgram,TimeProviderDLLs,TrustProviderDLL,UninstallStrings,UserInitMPRScripts,Users,UtilmanHijack,WellKnownCOM,WERRuntimeExceptionHandlers,WindowsLoadKey,WindowsUnsignedFiles,WindowsUpdateTestDlls,WinlogonHelperDLLs,WMIConsumers,Wow64LayerAbuse,WSL & powershell.exe -Command "Remove-MpPreference -ExclusionPath "C:\Windows\Temp\trawler.ps1" -Force"
 file_name: $time$_trawler.csv
 merge: csv
 id: trawler
+tags: [persistence]
+dependencies: [trawler.ps1]
 ```
-Just remember - all files are copied into C:\Windows\temp\$BASENAME$ for the subsequent execution command.
+Just remember - all files are copied into C:\Windows\temp\$BASENAME$ for the subsequent execution command.  Files are only copied once - so even if you need the same dependency or executable for multiple commands, omni knows it only needs to execute a single copy operation for each source file no matter how many times it is specified in different configurations.
 
 config.yaml comes preloaded to run many EZ Tools - to make the most of this, use 'omni.exe -prepare' to execute preparation statements, including Get-ZimmermanTools and any other configured commands designed to stage the response directory.
+use ',' as a delimiter, like below.
 
-Some of these tools require ancillary files (DLLs, etc) be copied to the host - to copy multiple individual files, use ',' as a delimiter, like below.
-
-```
-command: file=net6\PECmd.exe,net6\PECmd.dll | C:\Windows\Temp\PECmd.exe -d C:\Windows\Prefetch --csvf $FILENAME$ & powershell.exe -Command "$data = Import-CSV -Path $FILENAME$; $data | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},* | Export-CSV -Path $FILENAME$ -NoTypeInformation"
+Some of these tools require ancillary files (DLLs, etc) be copied to the host, like below.
+```yaml
+command: C:\Windows\Temp\PECmd.exe -d C:\Windows\Prefetch --csvf $FILENAME$ & powershell.exe -Command "$data = Import-CSV -Path $FILENAME$; $data | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},* | Export-CSV -Path $FILENAME$ -NoTypeInformation"
 file_name: $time$_PECmd.csv
 merge: csv
 id: PECmd
+dependencies: [net6\PECmd.exe,net6\PECmd.dll]
 ```
 
-If we have an entire directory we want to copy over, we can do this via dir= rather than file=, like below:
-```
-command: dir=net6\RECmd | C:\Windows\Temp\net6\RECmd\RECmd.exe -d C:\Users --csvf $FILENAME$ --bn C:\Windows\Temp\net6\RECmd\BatchExamples\DFIRBatch.reb && powershell.exe -Command "$data = Import-CSV -Path $FILENAME$; $data | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},* | Export-CSV -Path $FILENAME$ -NoTypeInformation"
+Dependencies can also specify a directory tree to copy to the target instead of specific files.
+
+```yaml
+command: C:\Windows\Temp\net6\RECmd\RECmd.exe -d C:\Users --csvf $FILENAME$ --bn C:\Windows\Temp\net6\RECmd\BatchExamples\DFIRBatch.reb && powershell.exe -Command "$data = Import-CSV -Path $FILENAME$; $data | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},* | Export-CSV -Path $FILENAME$ -NoTypeInformation"
 file_name: $time$_RECmd_DFIRBatch_Users.csv
 merge: csv
 id: RECmd_DFIRBatch_Users
+dependencies: [net6\RECmd]
+```
+
+For evidence retrieval, there are a few things to consider:
+* Some tools may produce multiple files and we may not have control over the output names
+  * Sometimes we can get away with aggregating to a single named file via PowerShell addon, but not always
+* Sometimes we may want to collect an entire output directory
+* Sometimes we may want to collect a single file
+
+One example of this is the output of WxTCmd.exe - designed to process ActivitiesCache.db files from Windows10+ devices - to effectively run this on a remote device, we would need to wrap it in some PowerShell like below:
+```powershell
+$files = Get-ChildItem -Path "C:\Users\*\AppData\Local\ConnectedDevicesPlatform\*\ActivitiesCache.db" -Recurse;
+foreach ($f in $files){
+cmd.exe /c WxTCmd.exe -f "$($f.FullName)" --csv C:\Windows\Temp\wxtcmd
+}
+```
+
+Now we know that the tool will execute on each discovered cache file and output dynamically into C:\Windows\temp\wxtcmd - we can instruct omni to run this remotely after copying WxTCmd to the target and then copy back an entire directory of files instead of a single file like below:
+
+```yaml
+command: powershell.exe -Command "$files = Get-ChildItem -Path 'C:\Users\*\AppData\Local\ConnectedDevicesPlatform\*\ActivitiesCache.db' -Recurse;foreach ($f in $files){cmd.exe /c C:\Windows\Temp\WxTCmd.exe -f "$($f.FullName)" --csv C:\Windows\Temp\$DIRNAME$}"
+dir_name: $time$_WxTCmd
+merge: none
+id: WxTCmd
+tags: [execution, quick, eztools, wxtcmd]
+dependencies: [net6\WxTCmd.dll,net6\WxTCmd.exe,net6\WxTCmd.runtimeconfig.json]
+```
+
+The other problem with this type of tooling is that it produces a variable number of CSV files by default, such as for different users or aspects of the artifact in question.  omni includes a helper script for merging disparate CSV files (CSVMerge.ps1) that we can deploy to targets to help improve our analysis and aggregation capabilities - the below configuration will run the tooling then merge all of the output CSVs into a single CSV as well as adding the local hostname to the output - this makes it easier for us to run the artifact on many targets and return all results to a single output file.
+
+To take advantage of this, we can simply modify the command like below:
+
+```yaml
+command: powershell.exe -Command "$files = Get-ChildItem -Path 'C:\Users\*\AppData\Local\ConnectedDevicesPlatform\*\ActivitiesCache.db' -Recurse;foreach ($f in $files){cmd.exe /c C:\Windows\Temp\WxTCmd.exe -f "$($f.FullName)" --csv C:\Windows\Temp\$DIRNAME$}" && powershell.exe C:\Windows\temp\CSVMerge.ps1 -addhostname -directory C:\Windows\temp\$DIRNAME$ -outputFile $FILENAME$
+dir_name: $time$_WxTCmd
+file_name: $time$_WxTCmd_Merged.csv
+merge: none
+id: WxTCmd
+tags: [execution, quick, eztools, wxtcmd]
+dependencies: [net6\WxTCmd.dll,net6\WxTCmd.exe,net6\WxTCmd.runtimeconfig.json]
 ```
 
 ### Preparation
 It is also possible to run 'preparation' commands as specified in the configuration file when using the '-prepare' switch - these are designed to execute before anything else on the localhost and are intended to download, organize or otherwise prepare local tools/scripts for use later on against remote hosts as needed.
 
 One example of this is to execute Get-ZimmermanTools to ensure they exist before we use them on remote hosts.
-```
+```yaml
 preparations:
   - command: powershell.exe -Command "iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/EricZimmerman/Get-ZimmermanTools/refs/heads/master/Get-ZimmermanTools.ps1'))"
     note: Download and execute Get-ZimmermanTools into current working directory
@@ -115,7 +161,7 @@ File names correspond to the name specified in the config.yaml file for each exe
 Additionally, if a merge function is specified such as 'csv', omni will attempt to merge all files across all devices when collection is complete to produce a unified file for each command output.
 
 For this to be useful, you should ensure that each command output includes a 'hostname' or similar - omni can also force-add a hostname column if the command configuration includes addhostname:true, such as below:
-
+yaml
 ```
 command: powershell.exe -Command "Get-NetNeighbor -ErrorAction SilentlyContinue | Select-Object * | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
 file_name: $time$_arp_cache.csv
@@ -150,7 +196,7 @@ This will insert a column named 'PSComputerName' that will reflect the name of t
 ### Running Common Tools
 
 omni is designed to be flexible - as such, it is more than feasible to run any type of host-based tool at scale - for example, KAPE - we could setup a command processor that drops KAPE on our targets, executes and then collects the resulting ZIPs like below:
-```
+```yaml
 command: dir=KAPE | C:\windows\temp\kape\kape.exe --tsource C --tdest C:\Windows\temp\kape\machine\ --tflush --target !SANS_Triage --zip kape && powershell.exe -Command "$kapezip = Get-ChildItem -Path C:\Windows\temp\kape\machine\*.zip; Rename-Item -Path $kapezip.FullName -NewName '$FILENAME$'"
 file_name: $time$_kape.zip
 merge: pool
@@ -169,3 +215,9 @@ This will result in running KAPE with the specified arguments, copying the resul
 * pool
   * Collect files that match the suffix and move them into the 'aggregated' directory
   * add_hostname will add a prefix to the filename with the detected device name based on the parent directory
+
+### Other Topics
+
+Tools have dependencies - for example, you can download 3 different versions of most EZTools like PECmd - targeting .NET 4, 6 and 9 respectively - in most situations, investigators first collect raw evidence then have a standardized processing setup where the data can be parsed.
+
+If we really wanted to, we could copy all 3 versions of an EZTool to the target, write a PowerShell script that determines which version of .NET exists then execute the appropriate version.  We could also just write a command that ZIPs up all Prefetch files on the target and brings them back to our machine for analysis.  Or deploy KAPE as discussed above to do this for us.

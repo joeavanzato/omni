@@ -22,12 +22,18 @@ const (
 	MergeFuncPool MergeFuncs = "pool"
 )
 
-func doMerges(c Config) error {
+func doMerges(c Config, aggregateExplicit bool) error {
 	// For each command that specifies CSV merge, we find all the relevant files
 	var wg sync.WaitGroup
-	for _, v := range c.Commands {
+	cmds := make([]Command, 0)
+	if aggregateExplicit {
+		cmds = c.Commands
+	} else {
+		cmds = commandsExecuting
+	}
+	for _, v := range cmds {
 		if v.Merge == MergeFuncCSV {
-			//sourceFile := doFileNameReplacements(v.FileName)
+			//sourceFile := doNameReplacements(v.FileName)
 			sourceFile := strings.Replace(v.FileName, "$time$", "", 1)
 			//sourceFile = strings.TrimSuffix(sourceFile, filepath.Ext(sourceFile))
 			destinationFile := fmt.Sprintf("aggregated\\%s.csv", v.ID)

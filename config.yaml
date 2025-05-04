@@ -104,7 +104,7 @@ commands:
     tags: [quick, file, suspicious_extensions_created_last7days]
     id: suspicious_extensions_created_last7days
     # PECmd
-  - command: C:\Windows\Temp\PECmd.exe -d C:\Windows\Prefetch --csvf $FILENAME$ && powershell.exe -Command "$data = Import-CSV -Path $FILENAME$; $data | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},* | Export-CSV -Path $FILENAME$ -NoTypeInformation"
+  - command: C:\Windows\Temp\PECmd.exe -d C:\Windows\Prefetch --csv C:\Windows\temp --csvf $FILENAME$ && powershell.exe -Command "$data = Import-CSV -Path $FILENAME$; $data | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},* | Export-CSV -Path $FILENAME$ -NoTypeInformation"
     file_name: $time$_PECmd.csv
     merge: csv
     id: PECmd

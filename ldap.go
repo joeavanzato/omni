@@ -103,6 +103,7 @@ func getAllEnabledComputerDevices() ([]string, error) {
 		}
 	}
 
+	// TODO - Filter out Linux machines
 	searchRequest := ldap.NewSearchRequest(
 		dnString, // The base dn to search
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,

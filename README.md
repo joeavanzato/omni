@@ -27,8 +27,9 @@ omni can receive a list of targets at the command-line, via a line-delimited fil
 
 ### Example Usage
 ```
-omni.exe
-- Launch omni with all targets from .\config.yaml and default timeout (15)/worker (250) settings using WMI and will query AD for targets
+omni.exe -tags builtin
+- Launch omni with all targets from .\config.yaml having tag 'builtin' and default timeout 
+(15)/worker (250) settings using Scheduled Tasks for execution quering AD for enabled computers to use as targets
 
 omni.exe -workers 500 -timeout 30 -tags quick,process
 - Add more workers, increase the timeout duration per-target and only use configurations with the specified tags

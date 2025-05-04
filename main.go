@@ -10,20 +10,26 @@ import (
 	"time"
 )
 
+// TODO - ZIP files/dirs to copy for quicker transfer and unpack on target machines with PowerShell preamble
+
 type Config struct {
 	Preparations []struct {
 		Command string `yaml:"command"`
 		Note    string `yaml:"note"`
 	} `yaml:"preparations"`
-	Commands []struct {
-		Command     string     `yaml:"command"`
-		FileName    string     `yaml:"file_name"`
-		Merge       MergeFuncs `yaml:"merge"`
-		ID          string     `yaml:"id"`
-		SkipDir     bool       `yaml:"skip_dir"`
-		AddHostname bool       `yaml:"add_hostname"`
-		Tags        []string   `yaml:"tags"`
-	} `yaml:"commands"`
+	Commands []Command `yaml:"commands"`
+}
+
+type Command struct {
+	Command      string     `yaml:"command"`      // The command to execute
+	FileName     string     `yaml:"file_name"`    // Used to replace $FILENAME$ in cmdline for retrieval/execution
+	DirName      string     `yaml:"dir_name"`     // Used to replace $DIRNAME$ in cmdline for retrieval/execution
+	Merge        MergeFuncs `yaml:"merge"`        // Specifes how, if at all, output files should be merged
+	ID           string     `yaml:"id"`           // Unique ID for the command
+	SkipDir      bool       `yaml:"skip_dir"`     // If true, $FILENAME$ will not have C:\Windows\Temp added
+	AddHostname  bool       `yaml:"add_hostname"` // When merging, should we add a hostname column (PSComputerName) - for outputs where it may not be possible to include in the file directly
+	Tags         []string   `yaml:"tags"`         // Filter Tags
+	Dependencies []string   `yaml:"dependencies"` // File/Directory dependencies
 }
 
 var (
@@ -42,9 +48,11 @@ var (
 	tags       = flag.String("tags", "*", "comma-separated list of tags to filter the config file by - if not specified, all commands will be executed")
 
 	// Internal
-	currentTime     = time.Now().Format("15_04_05")
-	signalFile      = fmt.Sprintf("%s_omni_done", currentTime)
-	collectionFiles = []string{}
+	currentTime       = time.Now().Format("15_04_05")
+	signalFile        = fmt.Sprintf("%s_omni_done", currentTime) // When this exists, signals batch execution is completed
+	collectionFiles   = []string{}                               // Files to collect from targets
+	collectionDirs    = []string{}                               // Directories insice C:\Windows\Temp to collect from targets
+	commandsExecuting = []Command{}                              // Commands that are included in the current run
 )
 
 func main() {
@@ -86,7 +94,7 @@ func main() {
 		if err != nil && !os.IsExist(err) {
 			log.Fatalf("Error creating aggregated directory: %v", err)
 		}
-		err = doMerges(config)
+		err = doMerges(config, true)
 		if err != nil {
 			log.Printf("Error merging files: %v", err)
 		}
@@ -144,7 +152,7 @@ func main() {
 		log.Fatalf("Error creating aggregated directory: %v", err)
 	}
 	log.Printf("Aggregating Results...\n")
-	err = doMerges(config)
+	err = doMerges(config, false)
 	if err != nil {
 		log.Printf("Error merging files: %v", err)
 	}

@@ -191,3 +191,10 @@ commands:
     id: RDPActivity
     tags: [access, rdp, builtin]
     dependencies: [utilities\ExtractRDPActivity.ps1]
+  # Extract PowerShell Script Blocks
+  - command: powershell.exe C:\Windows\temp\ExtractScriptBlockLogging.ps1 -DaysBack 14 -OutputFile $FILENAME$
+    file_name: $time$_ScriptBlockLogging.csv
+    merge: csv
+    id: ScriptBlockLogging
+    tags: [access, powershell, builtin]
+    dependencies: [utilities\ExtractScriptBlockLogging.ps1]

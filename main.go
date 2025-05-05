@@ -46,7 +46,7 @@ var (
 	config = Config{}
 
 	// Arguments
-	configFile  = flag.String("config", "configs\\config.yaml", "path to config file")
+	configFile  = flag.String("config", "configs\\default_config.yaml", "path to config file")
 	execMethod  = flag.String("method", "schtasks", "execution method (wmi, schtasks, sc)")
 	targets     = flag.String("targets", "all", "comma-separated list of targets OR file-path to line-delimited targets - if not specified, will query for all enabled computer devices")
 	workers     = flag.Int("workers", 250, "number of concurrent workers to use")

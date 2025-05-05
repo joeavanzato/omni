@@ -1,0 +1,8 @@
+commands:
+  # Expects a directory named 'kape' to exist at .\omni\kape - this directory should contain the KAPE executable and the targets directory
+  - command: C:\windows\temp\kape\kape.exe --tsource C --tdest C:\Windows\temp\kape\machine\ --tflush --target !SANS_Triage --zip kape && powershell.exe -Command "$kapezip = Get-ChildItem -Path C:\Windows\temp\kape\machine\*.zip; Rename-Item -Path $kapezip.FullName -NewName '$FILENAME$'"
+    file_name: $time$_kape.zip
+    merge: pool
+    id: kape
+    add_hostname: True
+    dependencies: [kape]

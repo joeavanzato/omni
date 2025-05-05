@@ -13,8 +13,14 @@ import (
 // TODO - ZIP files/dirs to copy for quicker transfer and unpack on target machines with PowerShell preamble
 // TODO - Convert long YAML to multiline for readability
 // TODO - Allow specification of specific command to run by ID
-// TODO - DaysAgo parameter for dynamic specification at CLI
 // TODO - Force Stop PID if it is still running after context cancel/timeout
+// TODO - Add example configs for common hunt scenarios
+// TODO - Add -term support to ExtractScriptBlockLogging/ExtractConsoleHostHistory
+// TODO - Add -user support to ExtractRDPActivity/ExtractLogons
+// TODO - Allow customization of temporary execution directory instead of C:\Windows\Temp
+// TODO - Add support for checking if certain files already exist before executing preparation command
+// TODO - Asymmetric CSV Merge to support disparate column names
+// TODO - Include dependency cleanup in the batch file directly - this can be useful if the program is terminated abruptly mid-execution
 
 type Config struct {
 	Preparations []struct {
@@ -50,6 +56,7 @@ var (
 	nodownload = flag.Bool("nodownload", false, "skip downloading missing files contained inside 'commands' section of the config file")
 	prep       = flag.Bool("prepare", false, "executes commands on localhost listed in the 'prepare' section of the config file")
 	tags       = flag.String("tags", "*", "comma-separated list of tags to filter the config file by - if not specified, all commands will be executed")
+	daysBack   = flag.Int("daysback", 7, "number of days to go back for commands that contain $DAYSBACK$ string")
 
 	// Internal
 	currentTime       = time.Now().Format("15_04_05")
@@ -135,7 +142,7 @@ func main() {
 	log.Printf("Building Batch Script...\n")
 
 	tmpTags := strings.Split(strings.ToLower(*tags), ",")
-	batScript, err := buildBatchScript(config, *nodownload, tmpTags)
+	batScript, err := buildBatchScript(config, *nodownload, tmpTags, *daysBack)
 	if err != nil {
 		log.Fatalf("Error building batch script: %v", err)
 	}

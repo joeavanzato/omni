@@ -108,8 +108,8 @@ commands:
     file_name: $time$_PECmd.csv
     merge: csv
     id: PECmd
-    tags: [quick, process, execution, eztools, pecmd]
-    dependencies: [net6\PECmd.dll,net6\PECmd.exe,net6\PECmd.runtimeconfig.json, external]
+    tags: [quick, process, execution, eztools, pecmd, external]
+    dependencies: [net6\PECmd.dll,net6\PECmd.exe,net6\PECmd.runtimeconfig.json]
     # TODO - Cleanup DFIR Batch - into single dir
     # DFIR Batch for C:\Users
   - command: C:\Windows\Temp\net6\RECmd\RECmd.exe -d C:\Users --csv C:\Windows\Temp --csvf $FILENAME$ --bn C:\Windows\Temp\net6\RECmd\BatchExamples\DFIRBatch.reb && powershell.exe -Command "$data = Import-CSV -Path $FILENAME$; $data | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},* | Export-CSV -Path $FILENAME$ -NoTypeInformation"

@@ -39,8 +39,8 @@ Consider the following questions - if you answer 'yes' to any of these, omni can
 ### Example Usage
 ```
 omni.exe
-- Launch omni using configs\config.yaml - a light-weight set of hunting data including processes, connections, services, tasks, etc
-- This default will be 'good enough' to start off for most - if you need more data, check configs\verbose.yaml for additional ideas
+- Launch omni using configs\default_config.yaml - a light-weight set of hunting data including processes, connections, services, tasks, etc
+- This default will be 'good enough' to start off for many situations - if you need more data, check configs\verbose.yaml for additional ideas/examples
 
 omni.exe -ids processes,services,products,wmi_startups,tcp_connections,scheduled_tasks,smbsessions
 - Launch omni and target a core set of light-weight data
@@ -204,16 +204,19 @@ This will insert a column named 'PSComputerName' that will reflect the name of t
   -aggregate
         skip everything except aggregation - in the case where the script has already been run and you just want to aggregate the results
   -config string
-        path to config file (default "config.yaml")
+        path to config file (default "configs\\default_config.yaml")
   -daysback int
         number of days to go back for commands that contain $DAYSBACK$ string (default 7)
   -ids string
+        comma-separated list of command IDs to execute (default "*")
   -method string
         execution method (wmi, schtasks, sc) (default "schtasks")
   -nodownload
         skip downloading missing files contained inside 'commands' section of the config file
   -prepare
         executes commands on localhost listed in the 'prepare' section of the config file
+  -skipconfirm
+        skip confirmation prompt before executing commands
   -tags string
         comma-separated list of tags to filter the config file by - if not specified, all commands will be executed (default "*")
   -targets string

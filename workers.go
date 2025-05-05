@@ -17,7 +17,6 @@ type ComputerReport struct {
 	FilesCopied       bool
 	ExecutionSuccess  bool
 	SignalFileSuccess bool
-	ResultsCollected  bool
 }
 
 // SafeCounter helper type for concurrent counter
@@ -80,7 +79,7 @@ func startWorkers(batchFile string, targets []string, workers int, timeout int, 
 	wg.Wait()
 	close(reportChan)
 	rg.Wait()
-	reportHeaders := []string{"PSComputerName", "FilesCopied", "ExecutionSuccess", "SignalFileSuccess", "ResultsCollected"}
+	reportHeaders := []string{"PSComputerName", "FilesCopied", "ExecutionSuccess", "SignalFileSuccess"}
 	reportData := make([][]string, 0)
 	for _, v := range computerReportData {
 		row := []string{
@@ -88,7 +87,6 @@ func startWorkers(batchFile string, targets []string, workers int, timeout int, 
 			fmt.Sprintf("%t", v.FilesCopied),
 			fmt.Sprintf("%t", v.ExecutionSuccess),
 			fmt.Sprintf("%t", v.SignalFileSuccess),
-			fmt.Sprintf("%t", v.ResultsCollected),
 		}
 		reportData = append(reportData, row)
 	}
@@ -116,7 +114,6 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 			FilesCopied:       false,
 			ExecutionSuccess:  false,
 			SignalFileSuccess: false,
-			ResultsCollected:  false,
 		}
 
 		// Collect and Delete Output Files

@@ -47,14 +47,14 @@ func buildBatchScript(c Config, nodownload bool, tagArgs []string, daysback int,
 	commandIDs := make([]string, 0)
 	idSlice := strings.Split(ids, ",")
 	for _, v := range idSlice {
-		commandIDs = append(commandIDs, strings.TrimSpace(v))
+		commandIDs = append(commandIDs, strings.ToLower(strings.TrimSpace(v)))
 	}
 	// If commandIDs holds anything, we only want to process those commands - we ignore tags/etc
 
 	for _, v := range c.Commands {
 		tagMatch := false
 		if commandIDs[0] != "*" {
-			if !slices.Contains(commandIDs, v.ID) {
+			if !slices.Contains(commandIDs, strings.ToLower(v.ID)) {
 				// Skip this command if the ID isn't present
 				continue
 			}

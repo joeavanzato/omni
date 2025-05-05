@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -34,7 +35,7 @@ func parseConfig(configFile string) (Config, error) {
 }
 
 // buildBatchScript creates a batch script based on the commands in the config and file/dir availability if dependencies are detected
-func buildBatchScript(c Config, nodownload bool, tagArgs []string) (string, error) {
+func buildBatchScript(c Config, nodownload bool, tagArgs []string, daysback int) (string, error) {
 	batTarget := "omni_batch.bat"
 	f, err := os.Create(batTarget)
 	if err != nil {
@@ -122,7 +123,7 @@ func buildBatchScript(c Config, nodownload bool, tagArgs []string) (string, erro
 		if v.DirName != "" {
 			collectionDirs = append(collectionDirs, dirName)
 		}
-		cmd = doCmdReplacements(cmd, fileName, v.SkipDir, dirName)
+		cmd = doCmdReplacements(cmd, fileName, v.SkipDir, dirName, daysback)
 		commandsExecuting = append(commandsExecuting, v)
 		_, err := f.WriteString(fmt.Sprintf("start /b /wait cmd.exe /c %s\n", cmd))
 		if err != nil {
@@ -144,13 +145,14 @@ func doNameReplacements(name string) string {
 }
 
 // doCmdReplacements replaces the placeholders in commands with actual values
-func doCmdReplacements(cmd string, filename string, skipdir bool, dirname string) string {
+func doCmdReplacements(cmd string, filename string, skipdir bool, dirname string, daysback int) string {
 	if skipdir {
 		cmd = strings.ReplaceAll(cmd, "$FILENAME$", fmt.Sprintf("%s", filename))
 	} else {
 		cmd = strings.ReplaceAll(cmd, "$FILENAME$", fmt.Sprintf("C:\\Windows\\temp\\%s", filename))
 	}
 	cmd = strings.ReplaceAll(cmd, "$DIRNAME$", dirname)
+	cmd = strings.ReplaceAll(cmd, "$DAYSBACK$", strconv.Itoa(daysback))
 	return cmd
 }
 
@@ -381,4 +383,19 @@ func moveFile(source, destination string) error {
 		return err
 	}
 	return nil
+}
+
+func buildRecordSlice(mainHeaders []string, currentHeaders []string, row []string, filename string, headerMap map[string]int) []string {
+	record := make([]string, len(mainHeaders))
+	for i := range record {
+		record[i] = ""
+	}
+	for i, header := range currentHeaders {
+		if index, ok := headerMap[header]; ok {
+			record[index] = row[i]
+		} else {
+			log.Printf("header %s not found in main headers for file %v", header, filename)
+		}
+	}
+	return record
 }

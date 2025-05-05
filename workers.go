@@ -236,6 +236,7 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 						continue
 					}
 				}
+				// TODO - Kill PID if still running for WMI
 
 				if execMethod == "schtasks" {
 					err = deleteTask(target, taskName)

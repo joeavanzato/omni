@@ -35,7 +35,7 @@ func parseConfig(configFile string) (Config, error) {
 }
 
 // buildBatchScript creates a batch script based on the commands in the config and file/dir availability if dependencies are detected
-func buildBatchScript(c Config, nodownload bool, tagArgs []string, daysback int, ids string) (string, error) {
+func buildBatchScript(c Config, nodownload bool, tagArgs []string, daysback int, ids string, skipconfirm bool) (string, error) {
 	batTarget := "omni_batch.bat"
 	f, err := os.Create(batTarget)
 	if err != nil {
@@ -50,7 +50,7 @@ func buildBatchScript(c Config, nodownload bool, tagArgs []string, daysback int,
 		commandIDs = append(commandIDs, strings.ToLower(strings.TrimSpace(v)))
 	}
 	// If commandIDs holds anything, we only want to process those commands - we ignore tags/etc
-
+	fullCommands := make([]string, 0)
 	for _, v := range c.Commands {
 		tagMatch := false
 		if commandIDs[0] != "*" {
@@ -142,6 +142,7 @@ func buildBatchScript(c Config, nodownload bool, tagArgs []string, daysback int,
 		}
 		cmd = doCmdReplacements(cmd, fileName, v.SkipDir, dirName, daysback)
 		commandsExecuting = append(commandsExecuting, v)
+		fullCommands = append(fullCommands, cmd)
 		_, err := f.WriteString(fmt.Sprintf("start /b /wait cmd.exe /c %s\n", cmd))
 		if err != nil {
 			return "", err
@@ -152,6 +153,18 @@ func buildBatchScript(c Config, nodownload bool, tagArgs []string, daysback int,
 		return "", fmt.Errorf("no commands to execute")
 	}
 	f.WriteString(fmt.Sprintf("cmd.exe /c echo 1 > C:\\Windows\\temp\\%s\n", signalFile))
+	for _, v := range commandsExecuting {
+		log.Printf("Executing: %s", v.ID)
+	}
+	log.Printf("omni is about to execute %v commands", cmdCount)
+	if !skipconfirm {
+		var i string
+		fmt.Print("Please type 'confirm' to continue: ")
+		fmt.Scan(&i)
+		if i != "confirm" {
+			return "", fmt.Errorf("user aborted execution")
+		}
+	}
 	return batTarget, nil
 }
 

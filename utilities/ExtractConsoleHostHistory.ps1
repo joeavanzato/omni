@@ -1,17 +1,13 @@
 ﻿param (
     [Parameter(Mandatory=$false)]
-    [int]$DaysBack = 7,
-    
-    [Parameter(Mandatory=$false)]
     [string]$OutputFile = "ConsoleHostHistory.csv"
 )
 
 $computerName = $env:COMPUTERNAME
 
 try {
-    $UserProfiles = Get-ChildItem -Path "C:\Users" -Directory |
-                    Where-Object { $_.Name -notin @('Public', 'Default', 'Default User', 'All Users') }
-        
+    $UserProfiles = Get-ChildItem -Path "C:\Users" -Directory    
+
     $Results = @()
         
     foreach ($Profile in $UserProfiles) {

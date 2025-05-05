@@ -5,6 +5,10 @@ import (
 	"time"
 )
 
+// I decided to use schtasks here instead of anything else such as RPC over Named Pipes or COM/OLE (https://github.com/joeavanzato/goexec/blob/main/task.go)
+// due to the simplicity and the assumption that we are always running this type of software as an admin already authenticated on the network
+
+// runTask creates a scheduled task on the target machine and runs it immediately
 func runTask(target, command, taskName string) error {
 	//remoteCommand := "cmd.exe /c C:\\temp\\test.bat"
 	createCmd := exec.Command("schtasks.exe",

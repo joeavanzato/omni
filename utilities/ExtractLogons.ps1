@@ -12,7 +12,7 @@ $computerName = $env:COMPUTERNAME
 try {
     $Events = Get-WinEvent -FilterHashtable @{
         LogName = 'Security'
-        Id = 4624  # Successful logon event ID
+        Id = 4624
         StartTime = $StartDate
     } -ErrorAction Stop
     
@@ -52,7 +52,6 @@ try {
         }
     }
     
-    # Export the results to CSV
     $LogonEvents | Export-Csv -Path $OutputFile -NoTypeInformation
     
 } catch {

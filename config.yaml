@@ -110,6 +110,7 @@ commands:
     id: PECmd
     tags: [quick, process, execution, eztools, pecmd]
     dependencies: [net6\PECmd.dll,net6\PECmd.exe,net6\PECmd.runtimeconfig.json, external]
+    # TODO - Cleanup DFIR Batch - into single dir
     # DFIR Batch for C:\Users
   - command: C:\Windows\Temp\net6\RECmd\RECmd.exe -d C:\Users --csv C:\Windows\Temp --csvf $FILENAME$ --bn C:\Windows\Temp\net6\RECmd\BatchExamples\DFIRBatch.reb && powershell.exe -Command "$data = Import-CSV -Path $FILENAME$; $data | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},* | Export-CSV -Path $FILENAME$ -NoTypeInformation"
     file_name: $time$_RECmd_DFIRBatch_Users.csv
@@ -176,3 +177,17 @@ commands:
     id: LogonActivity
     tags: [access, user, builtin]
     dependencies: [utilities\ExtractLogons.ps1]
+  # Extract ConsoleHostHistory Commands
+  - command: powershell.exe C:\Windows\temp\ExtractConsoleHostHistory.ps1 -DaysBack 30 -OutputFile $FILENAME$
+    file_name: $time$_ConsoleHostHistory.csv
+    merge: csv
+    id: ConsoleHostHistory
+    tags: [execution,file, powershell, builtin]
+    dependencies: [utilities\ExtractConsoleHostHistory.ps1]
+  # Extract RDP Activity
+  - command: powershell.exe C:\Windows\temp\ExtractRDPActivity.ps1 -DaysBack 30 -OutputFile $FILENAME$
+    file_name: $time$_RDPActivity.csv
+    merge: csv
+    id: RDPActivity
+    tags: [access, rdp, builtin]
+    dependencies: [utilities\ExtractRDPActivity.ps1]

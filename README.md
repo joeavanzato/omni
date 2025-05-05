@@ -38,6 +38,12 @@ Consider the following questions - if you answer 'yes' to any of these, omni can
 
 ### Example Usage
 ```
+omni.exe
+- Launch omni using configs\config.yaml - a light-weight set of hunting data including processes, connections, services, tasks, etc
+
+omni.exe -ids processes,services,products,wmi_startups,tcp_connections,scheduled_tasks,smbsessions
+- Launch omni and target a core set of light-weight data
+
 omni.exe -tags builtin
 - Launch omni with all targets from .\config.yaml having tag 'builtin' with default timeout 
 (15) and worker (250) settings, using Scheduled Tasks for execution and querying AD for enabled computers to use as targets

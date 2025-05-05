@@ -140,7 +140,7 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 
 		// We won't establish explicit SMB connection because we are on the domain running with appropriate authentication
 		// Process can negotiate on our behalf transparently assuming we have permissions and the share is available
-		// Deploy auxiliary files (scripts, binaries, etc) specified in config.yaml
+		// Deploy auxiliary files (scripts, binaries, etc) specified in default_config.yaml
 		badError := false
 		for _, v := range filesToCopy {
 			targetPath := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, filepath.Base(v))

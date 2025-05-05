@@ -57,7 +57,9 @@ omni.exe -config configs\test.yaml
 ```
 
 ### Configuration File
-The configuration file controls omni's behavior - it is a YAML file that specifies commands to run, files/directories to copy, tools to prepare/download, etc.
+A configuration file is a brain that controls omni's behavior - it is a YAML-formatted file that specifies commands to run, files/directories to copy, tools to prepare/download, etc.
+
+By default, omni looks for .\config.yaml - but you can specify a different file using the '-config' switch.
 
 config.yaml can specify individual commands to execute - each of which are loaded into a batch file and prefixed with cmd.exe /c - for example:
 ```yaml
@@ -176,7 +178,7 @@ File names correspond to the name specified in the config.yaml file for each exe
 
 Additionally, if a merge function is specified such as 'csv', omni will attempt to merge all files across all devices when collection is complete to produce a unified file for each command output.
 
-For this to be useful, you should ensure that each command output includes a 'hostname' or similar - omni can also force-add a hostname column if the command configuration includes addhostname:true, such as below:
+For this to be useful, you should ensure that each command output includes a 'hostname' or similar - omni can also force-add a hostname column if the command configuration includes add_hostname:true, such as below:
 yaml
 ```
 command: powershell.exe -Command "Get-NetNeighbor -ErrorAction SilentlyContinue | Select-Object * | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
@@ -193,8 +195,10 @@ This will insert a column named 'PSComputerName' that will reflect the name of t
         skip everything except aggregation - in the case where the script has already been run and you just want to aggregate the results
   -config string
         path to config file (default "config.yaml")
+  -daysback int
+        number of days to go back for commands that contain $DAYSBACK$ string (default 7)
   -method string
-        execution method (wmi, schtasks) (default "schtasks")
+        execution method (wmi, schtasks, sc) (default "schtasks")
   -nodownload
         skip downloading missing files contained inside 'commands' section of the config file
   -prepare

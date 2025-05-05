@@ -106,6 +106,7 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 		if target == "" {
 			continue
 		}
+		sentReport := false
 		computerReport := ComputerReport{
 			PSComputerName:    target,
 			FilesCopied:       false,
@@ -114,12 +115,22 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 			ResultsCollected:  false,
 		}
 
+		// Collect and Delete Output Files
+		collectionFolder := fmt.Sprintf("devices\\%s", target)
+		err := os.MkdirAll(collectionFolder, os.ModePerm)
+		if err != nil {
+			log.Printf("Error creating collection folder %s: %v", collectionFolder, err)
+			reportChan <- computerReport
+			sentReport = true
+			continue
+		}
+
 		filesCopiedToTarget := make([]string, 0)
 		dirsCopiedToTarget := make([]string, 0) // actually needed?
-		log.Printf("Handling Target: %s [%d/%d]", target, counter.GetAndIncrement(), totalTargets)
+		log.Printf("Starting Target: %s [%d/%d]", target, counter.GetAndIncrement(), totalTargets)
 
 		// Make C:\Windows\Temp if it does not already exist for some reason
-		err := os.Mkdir(fmt.Sprintf("\\\\%s\\C$\\Windows\\temp", target), os.ModeDir)
+		err = os.Mkdir(fmt.Sprintf("\\\\%s\\C$\\Windows\\temp", target), os.ModeDir)
 		if err != nil && !os.IsExist(err) {
 			log.Printf("Error creating temp directory %s: %v", target, err)
 			reportChan <- computerReport
@@ -197,12 +208,12 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 		tempSignalFile := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, signalFile)
 		filesCopiedToTarget = append(filesCopiedToTarget, tempSignalFile)
 		// Wait for signal file
-		sentReport := false
 		done := false
 		for {
 			select {
 			case <-ctx.Done():
 				done = true
+				// START CLEANUP
 				// Delete Copied Directories
 				for _, v := range dirsToCopy {
 					tmp := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, v)
@@ -234,6 +245,54 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 						log.Printf("Error deleting service %s on %s: %v", taskName, target, err)
 					}
 				}
+				// END CLEANUP
+
+				// START COLLECTION
+				// We want to at least try to collect what's present, even if it's not 100% complete
+				_, err = os.Stat(tempSignalFile)
+				computerReport.SignalFileSuccess = true
+				if err == nil {
+					computerReport.SignalFileSuccess = true
+				}
+				// Collect and Delete Output Files
+
+				for _, v := range collectionFiles {
+					collectionFile := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, v)
+					destinationFile := fmt.Sprintf("%s\\%s", collectionFolder, v)
+					err = copyFile(collectionFile, destinationFile)
+					if err != nil && !os.IsNotExist(err) {
+						log.Printf("Error copying file %s to %s: %v", collectionFile, destinationFile, err)
+						continue
+					} else if err != nil && os.IsNotExist(err) {
+						continue
+					}
+					err = os.Remove(collectionFile)
+					if err != nil {
+						log.Printf("Error deleting file %s: %v", collectionFile, err)
+						continue
+					}
+				}
+
+				for _, v := range collectionDirs {
+					collectionDir := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, v)
+					destinationDir := fmt.Sprintf("%s\\%s", collectionFolder, v)
+					err = copyDirectory(collectionDir, destinationDir)
+					if err != nil && !os.IsNotExist(err) {
+						log.Printf("Error copying directory %s to %s: %v", collectionDir, destinationDir, err)
+						continue
+					} else if err != nil && os.IsNotExist(err) {
+						continue
+					}
+					err = os.RemoveAll(collectionDir)
+					if err != nil {
+						log.Printf("Error deleting directory %s: %v", collectionDir, err)
+						continue
+					}
+				}
+				// END COLLECTION
+				reportChan <- computerReport
+				sentReport = true
+				cancel()
 				break
 			default:
 				time.Sleep(5 * time.Second)
@@ -241,55 +300,6 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 				if err == nil {
 					time.Sleep(1 * time.Second)
 					computerReport.SignalFileSuccess = true
-
-					// Collect and Delete Output Files
-					collectionFolder := fmt.Sprintf("devices\\%s", target)
-					err = os.MkdirAll(collectionFolder, os.ModePerm)
-					if err != nil {
-						log.Printf("Error creating collection folder %s: %v", collectionFolder, err)
-						reportChan <- computerReport
-						sentReport = true
-						cancel()
-						continue
-					}
-
-					for _, v := range collectionFiles {
-						collectionFile := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, v)
-						destinationFile := fmt.Sprintf("%s\\%s", collectionFolder, v)
-						err = copyFile(collectionFile, destinationFile)
-						if err != nil && !os.IsNotExist(err) {
-							log.Printf("Error copying file %s to %s: %v", collectionFile, destinationFile, err)
-							continue
-						} else if err != nil && os.IsNotExist(err) {
-							continue
-						}
-						err = os.Remove(collectionFile)
-						if err != nil {
-							log.Printf("Error deleting file %s: %v", collectionFile, err)
-							continue
-						}
-					}
-
-					for _, v := range collectionDirs {
-						collectionDir := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, v)
-						destinationDir := fmt.Sprintf("%s\\%s", collectionFolder, v)
-						err = copyDirectory(collectionDir, destinationDir)
-						if err != nil && !os.IsNotExist(err) {
-							log.Printf("Error copying directory %s to %s: %v", collectionDir, destinationDir, err)
-							continue
-						} else if err != nil && os.IsNotExist(err) {
-							continue
-						}
-						err = os.RemoveAll(collectionDir)
-						if err != nil {
-							log.Printf("Error deleting directory %s: %v", collectionDir, err)
-							continue
-						}
-					}
-
-					computerReport.ResultsCollected = true
-					reportChan <- computerReport
-					sentReport = true
 					cancel()
 				}
 			}

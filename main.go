@@ -13,6 +13,8 @@ import (
 // TODO - ZIP files/dirs to copy for quicker transfer and unpack on target machines with PowerShell preamble
 // TODO - Convert long YAML to multiline for readability
 // TODO - Allow specification of specific command to run by ID
+// TODO - DaysAgo parameter for dynamic specification at CLI
+// TODO - Force Stop PID if it is still running after context cancel/timeout
 
 type Config struct {
 	Preparations []struct {

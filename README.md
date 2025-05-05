@@ -54,6 +54,9 @@ omni.exe -method wmi
 
 omni.exe -config configs\test.yaml
 - Execute a specific named configuration file
+
+omni.exe -ids processes,services
+- Execute 1 or more command directives by ID - this overrules any tag specification
 ```
 
 ### Configuration File
@@ -197,6 +200,7 @@ This will insert a column named 'PSComputerName' that will reflect the name of t
         path to config file (default "config.yaml")
   -daysback int
         number of days to go back for commands that contain $DAYSBACK$ string (default 7)
+  -ids string
   -method string
         execution method (wmi, schtasks, sc) (default "schtasks")
   -nodownload

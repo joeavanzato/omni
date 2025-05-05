@@ -35,7 +35,7 @@ func parseConfig(configFile string) (Config, error) {
 }
 
 // buildBatchScript creates a batch script based on the commands in the config and file/dir availability if dependencies are detected
-func buildBatchScript(c Config, nodownload bool, tagArgs []string, daysback int) (string, error) {
+func buildBatchScript(c Config, nodownload bool, tagArgs []string, daysback int, ids string) (string, error) {
 	batTarget := "omni_batch.bat"
 	f, err := os.Create(batTarget)
 	if err != nil {
@@ -43,8 +43,25 @@ func buildBatchScript(c Config, nodownload bool, tagArgs []string, daysback int)
 	}
 	defer f.Close()
 	cmdCount := 0
+
+	commandIDs := make([]string, 0)
+	idSlice := strings.Split(ids, ",")
+	for _, v := range idSlice {
+		commandIDs = append(commandIDs, strings.TrimSpace(v))
+	}
+	// If commandIDs holds anything, we only want to process those commands - we ignore tags/etc
+
 	for _, v := range c.Commands {
 		tagMatch := false
+		if commandIDs[0] != "*" {
+			if !slices.Contains(commandIDs, v.ID) {
+				// Skip this command if the ID isn't present
+				continue
+			}
+			// if the command ID is in the list, we don't care about tags
+			tagMatch = true
+		}
+
 		if tagArgs[0] != "*" {
 			for _, t := range v.Tags {
 				if slices.Contains(tagArgs, strings.ToLower(t)) {

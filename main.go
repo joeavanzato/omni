@@ -56,6 +56,7 @@ var (
 	prep       = flag.Bool("prepare", false, "executes commands on localhost listed in the 'prepare' section of the config file")
 	tags       = flag.String("tags", "*", "comma-separated list of tags to filter the config file by - if not specified, all commands will be executed")
 	daysBack   = flag.Int("daysback", 7, "number of days to go back for commands that contain $DAYSBACK$ string")
+	ids        = flag.String("ids", "*", "comma-separated list of command IDs to execute")
 
 	// Internal
 	currentTime       = time.Now().Format("15_04_05")
@@ -83,7 +84,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error validating config: %v", err)
 	}
-
+	tmpTags := strings.Split(strings.ToLower(*tags), ",")
 	if *prep {
 		log.Printf("Executing preparation commands on localhost")
 		// Execute the preparation commands on localhost
@@ -140,8 +141,7 @@ func main() {
 	log.Printf("Workers: %d", *workers)
 	log.Printf("Building Batch Script...\n")
 
-	tmpTags := strings.Split(strings.ToLower(*tags), ",")
-	batScript, err := buildBatchScript(config, *nodownload, tmpTags, *daysBack)
+	batScript, err := buildBatchScript(config, *nodownload, tmpTags, *daysBack, *ids)
 	if err != nil {
 		log.Fatalf("Error building batch script: %v", err)
 	}

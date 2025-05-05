@@ -91,18 +91,18 @@ commands:
     id: arp_cache
     tags: [quick, network, arp_cache, builtin]
     # Trawler - a persistence hunting utility - like PersistenceSniper
-  - command: powershell.exe -Command "Add-MpPreference -ExclusionPath "C:\Windows\Temp\trawler.ps1" -Force" & powershell.exe C:\Windows\temp\trawler.ps1 -csvfilename '$FILENAME$' -OutputLocation 'C:\Windows\temp' -ScanOptions ActiveSetup,AMSIProviders,AppCertDLLs,AppInitDLLs,ApplicationShims,AppPaths,AssociationHijack,AutoDialDLL,BIDDll,BITS,BootVerificationProgram,COMHijacks,CommandAutoRunProcessors,Connections,ContextMenu,ChromiumExtensions,DebuggerHijacks,DNSServerLevelPluginDLL,DisableLowIL,DirectoryServicesRestoreMode,DiskCleanupHandlers,ErrorHandlerCMD,ExplorerHelperUtilities,FolderOpen,GPOExtensions,GPOScripts,HTMLHelpDLL,IFEO,InstalledSoftware,InternetSettingsLUIDll,KnownManagedDebuggers,LNK,LSA,MicrosoftTelemetryCommands,ModifiedWindowsAccessibilityFeature,MSDTCDll,Narrator,NaturalLanguageDevelopmentDLLs,NetSHDLLs,NotepadPPPlugins,OfficeAI,OfficeGlobalDotName,Officetest,OfficeTrustedLocations,OfficeTrustedDocuments,OutlookStartup,PATHHijacks,PeerDistExtensionDll,PolicyManager,PowerShellProfiles,PrintMonitorDLLs,PrintProcessorDLLs,RATS,RDPShadowConsent,RDPStartupPrograms,RemoteUACSetting,ScheduledTasks,ScreenSaverEXE,ServiceControlManagerSD,SEMgrWallet,ServiceHijacks,Services,SethcHijack,SilentProcessExitMonitoring,Startups,SuspiciousFileLocation,TerminalProfiles,TerminalServicesDLL,TerminalServicesInitialProgram,TimeProviderDLLs,TrustProviderDLL,UninstallStrings,UserInitMPRScripts,Users,UtilmanHijack,WellKnownCOM,WERRuntimeExceptionHandlers,WindowsLoadKey,WindowsUnsignedFiles,WindowsUpdateTestDlls,WinlogonHelperDLLs,WMIConsumers,Wow64LayerAbuse,WSL & powershell.exe -Command "Remove-MpPreference -ExclusionPath "C:\Windows\Temp\trawler.ps1" -Force"
+  - command: powershell.exe -Command "Add-MpPreference -ExclusionPath "C:\Windows\Temp\trawler.ps1" -Force" & powershell.exe C:\Windows\temp\trawler.ps1 -csvfilename '$FILENAME$' -daysago $DAYSBACK$ -OutputLocation 'C:\Windows\temp' -ScanOptions ActiveSetup,AMSIProviders,AppCertDLLs,AppInitDLLs,ApplicationShims,AppPaths,AssociationHijack,AutoDialDLL,BIDDll,BITS,BootVerificationProgram,COMHijacks,CommandAutoRunProcessors,Connections,ContextMenu,ChromiumExtensions,DebuggerHijacks,DNSServerLevelPluginDLL,DisableLowIL,DirectoryServicesRestoreMode,DiskCleanupHandlers,ErrorHandlerCMD,ExplorerHelperUtilities,FolderOpen,GPOExtensions,GPOScripts,HTMLHelpDLL,IFEO,InstalledSoftware,InternetSettingsLUIDll,KnownManagedDebuggers,LNK,LSA,MicrosoftTelemetryCommands,ModifiedWindowsAccessibilityFeature,MSDTCDll,Narrator,NaturalLanguageDevelopmentDLLs,NetSHDLLs,NotepadPPPlugins,OfficeAI,OfficeGlobalDotName,Officetest,OfficeTrustedLocations,OfficeTrustedDocuments,OutlookStartup,PATHHijacks,PeerDistExtensionDll,PolicyManager,PowerShellProfiles,PrintMonitorDLLs,PrintProcessorDLLs,RATS,RDPShadowConsent,RDPStartupPrograms,RemoteUACSetting,ScheduledTasks,ScreenSaverEXE,ServiceControlManagerSD,SEMgrWallet,ServiceHijacks,Services,SethcHijack,SilentProcessExitMonitoring,Startups,SuspiciousFileLocation,TerminalProfiles,TerminalServicesDLL,TerminalServicesInitialProgram,TimeProviderDLLs,TrustProviderDLL,UninstallStrings,UserInitMPRScripts,Users,UtilmanHijack,WellKnownCOM,WERRuntimeExceptionHandlers,WindowsLoadKey,WindowsUnsignedFiles,WindowsUpdateTestDlls,WinlogonHelperDLLs,WMIConsumers,Wow64LayerAbuse,WSL & powershell.exe -Command "Remove-MpPreference -ExclusionPath "C:\Windows\Temp\trawler.ps1" -Force"
     file_name: $time$_trawler.csv
     merge: csv
     id: trawler
     tags: [persistence, trawler, external]
     dependencies: [https://raw.githubusercontent.com/joeavanzato/Trawler/refs/heads/main/trawler.ps1]
     # Quick check for recent anomalous files
-  - command: powershell.exe -Command "Get-ChildItem -Path $env:HOMEDRIVE\\temp,$env:HOMEDRIVE\\windows\\system32,$env:HOMEDRIVE\\windows\\temp,$env:HOMEDRIVE\\Users,$env:HOMEDRIVE\\programdata -Include *.htm,*.vbs,*.hta,*.chm,*.dll,*.exe,*.bat,*.ps1,*.zip,*.gz,*.7z,*.vba,*.ps,*.psm1,*.docm,*.xlsm,*.pptm,*.potm,*.ppam,*.ppsm,*.sldm,*.dotm,*.xltm,*.xlam,*.lnk,*.vb,*.pdf,*.jar,*.msi,*.msp,*.gadget,*.cmd,*.vbe,*.jsp,*.scr,*.rar,*.msh,*.wsh,*.wsf,*.scf -File -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.CreationTime -lt (Get-Date).AddDays(-7) } | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},PSPath,PSParentPath,PSChildName,PSDrive,PSProvider,PSIsContainer,Mode,LinkType,Name,Length,DirectoryName,Directory,IsReadOnly,Exists,FullName,Extension,CreationTime,CreationTimeUtc,LastAccessTime,LastAccessTimeUtc,LastWriteTime,LastWriteTimeUtc | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
-    file_name: $time$_suspicious_extensions_created_last7days.csv
+  - command: powershell.exe -Command "Get-ChildItem -Path $env:HOMEDRIVE\\temp,$env:HOMEDRIVE\\windows\\system32,$env:HOMEDRIVE\\windows\\temp,$env:HOMEDRIVE\\Users,$env:HOMEDRIVE\\programdata -Include *.htm,*.vbs,*.hta,*.chm,*.dll,*.exe,*.bat,*.ps1,*.zip,*.gz,*.7z,*.vba,*.ps,*.psm1,*.docm,*.xlsm,*.pptm,*.potm,*.ppam,*.ppsm,*.sldm,*.dotm,*.xltm,*.xlam,*.lnk,*.vb,*.pdf,*.jar,*.msi,*.msp,*.gadget,*.cmd,*.vbe,*.jsp,*.scr,*.rar,*.msh,*.wsh,*.wsf,*.scf -File -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.CreationTime -lt (Get-Date).AddDays(-$DAYSBACK$) } | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},PSPath,PSParentPath,PSChildName,PSDrive,PSProvider,PSIsContainer,Mode,LinkType,Name,Length,DirectoryName,Directory,IsReadOnly,Exists,FullName,Extension,CreationTime,CreationTimeUtc,LastAccessTime,LastAccessTimeUtc,LastWriteTime,LastWriteTimeUtc | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
+    file_name: $time$_recent_suspicious_files.csv
     merge: csv
-    tags: [quick, file, suspicious_extensions_created_last7days, builtin]
-    id: suspicious_extensions_created_last7days
+    tags: [quick, file, long, builtin]
+    id: recent_suspicious_files
     # PECmd
   - command: C:\Windows\Temp\PECmd.exe -d C:\Windows\Prefetch --csv C:\Windows\temp --csvf $FILENAME$ && powershell.exe -Command "$data = Import-CSV -Path $FILENAME$; $data | Select-Object -Property @{name='PSComputerName'; expression={ $env:COMPUTERNAME }},* | Export-CSV -Path $FILENAME$ -NoTypeInformation"
     file_name: $time$_PECmd.csv
@@ -170,8 +170,8 @@ commands:
     id: Autoruns
     tags: [persistence, quick, autoruns, external]
     dependencies: [Autoruns\autorunsc.exe,Autoruns\autorunsc64.exe]
-  # Extract Logons from Security.evtx
-  - command: powershell.exe C:\Windows\temp\ExtractLogons.ps1 -DaysBack 30 -OutputFile $FILENAME$
+  # Extract Logons from Security.evtx - By default looks for Network,Batch,Service,NetworkCleartText,NewCredentials and RemoteInteractive
+  - command: powershell.exe C:\Windows\temp\ExtractLogons.ps1 -DaysBack $DAYSBACK$ -OutputFile $FILENAME$ -LogonTypes 3,4,5,8,9,10
     file_name: $time$_LogonActivity.csv
     merge: csv
     id: LogonActivity
@@ -185,14 +185,14 @@ commands:
     tags: [execution,file, powershell, builtin]
     dependencies: [utilities\ExtractConsoleHostHistory.ps1]
   # Extract RDP Activity
-  - command: powershell.exe C:\Windows\temp\ExtractRDPActivity.ps1 -DaysBack 45 -OutputFile $FILENAME$
+  - command: powershell.exe C:\Windows\temp\ExtractRDPActivity.ps1 -DaysBack $DAYSBACK$ -OutputFile $FILENAME$
     file_name: $time$_RDPActivity.csv
     merge: csv
     id: RDPActivity
     tags: [access, rdp, builtin]
     dependencies: [utilities\ExtractRDPActivity.ps1]
   # Extract PowerShell Script Blocks
-  - command: powershell.exe C:\Windows\temp\ExtractScriptBlockLogging.ps1 -DaysBack 14 -OutputFile $FILENAME$
+  - command: powershell.exe C:\Windows\temp\ExtractScriptBlockLogging.ps1 -DaysBack $DAYSBACK$ -OutputFile $FILENAME$
     file_name: $time$_ScriptBlockLogging.csv
     merge: csv
     id: ScriptBlockLogging

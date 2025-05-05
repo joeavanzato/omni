@@ -178,14 +178,14 @@ commands:
     tags: [access, user, builtin]
     dependencies: [utilities\ExtractLogons.ps1]
   # Extract ConsoleHostHistory Commands
-  - command: powershell.exe C:\Windows\temp\ExtractConsoleHostHistory.ps1 -DaysBack 30 -OutputFile $FILENAME$
+  - command: powershell.exe C:\Windows\temp\ExtractConsoleHostHistory.ps1 -OutputFile $FILENAME$
     file_name: $time$_ConsoleHostHistory.csv
     merge: csv
     id: ConsoleHostHistory
     tags: [execution,file, powershell, builtin]
     dependencies: [utilities\ExtractConsoleHostHistory.ps1]
   # Extract RDP Activity
-  - command: powershell.exe C:\Windows\temp\ExtractRDPActivity.ps1 -DaysBack 30 -OutputFile $FILENAME$
+  - command: powershell.exe C:\Windows\temp\ExtractRDPActivity.ps1 -DaysBack 45 -OutputFile $FILENAME$
     file_name: $time$_RDPActivity.csv
     merge: csv
     id: RDPActivity

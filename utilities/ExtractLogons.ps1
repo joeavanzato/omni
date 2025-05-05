@@ -3,7 +3,10 @@
     [int]$DaysBack = 7,
     
     [Parameter(Mandatory=$false)]
-    [string]$OutputFile = "LogonEvents.csv"
+    [string]$OutputFile = "LogonEvents.csv",
+
+    [Parameter(Mandatory=$false)]
+    [int[]]$LogonTypes = @(2, 3, 4, 5, 7, 8, 9, 10, 11)
 )
 
 $StartDate = (Get-Date).AddDays(-$DaysBack)
@@ -33,6 +36,10 @@ try {
             10 { "RemoteInteractive" }
             11 { "CachedInteractive" }
             default { "Other ($LogonType)" }
+        }
+
+        if ($LogonTypes -and $LogonType -notin $LogonTypes) {
+            return
         }
         
         [PSCustomObject]@{

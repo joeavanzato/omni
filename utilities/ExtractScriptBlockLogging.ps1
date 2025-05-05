@@ -168,7 +168,7 @@ try {
     }
     
     try {
-        $Results | Export-Csv -Path $OutputFile -NoTypeInformation -Encoding UTF8 -ErrorAction Stop
+        $Results | Export-Csv -Path $OutputFile -NoTypeInformation -ErrorAction Stop
     }
     catch {
         Write-Warning "Standard CSV export failed, trying alternative method."

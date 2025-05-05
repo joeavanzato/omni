@@ -217,41 +217,6 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 			select {
 			case <-ctx.Done():
 				done = true
-				// START CLEANUP
-				// Delete Copied Directories
-				for _, v := range dirsToCopy {
-					tmp := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, v)
-					err = os.RemoveAll(tmp)
-					if err != nil && !os.IsNotExist(err) {
-						log.Printf("Error deleting directory %s: %v", tmp, err)
-						continue
-					}
-				}
-
-				// Delete Copied Files
-				for _, v := range filesCopiedToTarget {
-					err = os.Remove(v)
-					if err != nil && !os.IsNotExist(err) {
-						log.Printf("Error deleting file %s: %v", v, err)
-						continue
-					}
-				}
-				// TODO - Kill PID if still running for WMI
-
-				if execMethod == "schtasks" {
-					err = deleteTask(target, taskName)
-					if err != nil {
-						log.Printf("Error deleting task %s on %s: %v", taskName, target, err)
-					}
-				}
-				if execMethod == "sc" {
-					err = deleteService(target, taskName)
-					if err != nil {
-						log.Printf("Error deleting service %s on %s: %v", taskName, target, err)
-					}
-				}
-				// END CLEANUP
-
 				// START COLLECTION
 				// We want to at least try to collect what's present, even if it's not 100% complete
 				_, err = os.Stat(tempSignalFile)
@@ -294,6 +259,42 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 					}
 				}
 				// END COLLECTION
+
+				// START CLEANUP
+				// Delete Copied Directories
+				for _, v := range dirsToCopy {
+					tmp := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, v)
+					err = os.RemoveAll(tmp)
+					if err != nil && !os.IsNotExist(err) {
+						log.Printf("Error deleting directory %s: %v", tmp, err)
+						continue
+					}
+				}
+
+				// Delete Copied Files
+				for _, v := range filesCopiedToTarget {
+					err = os.Remove(v)
+					if err != nil && !os.IsNotExist(err) {
+						log.Printf("Error deleting file %s: %v", v, err)
+						continue
+					}
+				}
+				// TODO - Kill PID if still running for WMI
+
+				if execMethod == "schtasks" {
+					err = deleteTask(target, taskName)
+					if err != nil {
+						log.Printf("Error deleting task %s on %s: %v", taskName, target, err)
+					}
+				}
+				if execMethod == "sc" {
+					err = deleteService(target, taskName)
+					if err != nil {
+						log.Printf("Error deleting service %s on %s: %v", taskName, target, err)
+					}
+				}
+				// END CLEANUP
+
 				reportChan <- computerReport
 				sentReport = true
 				cancel()

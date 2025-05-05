@@ -33,7 +33,7 @@ func parseConfig(configFile string) (Config, error) {
 	return c, nil
 }
 
-// buildBatchScript creates a batch script based on the commands in the config
+// buildBatchScript creates a batch script based on the commands in the config and file/dir availability if dependencies are detected
 func buildBatchScript(c Config, nodownload bool, tagArgs []string) (string, error) {
 	batTarget := "omni_batch.bat"
 	f, err := os.Create(batTarget)
@@ -361,6 +361,7 @@ func printLogo() {
 	fmt.Println("")
 }
 
+// getLastPathElement returns the last element of a path
 func getLastPathElement(path string) string {
 	if runtime.GOOS == "windows" {
 		path = strings.ReplaceAll(path, "/", "\\")
@@ -369,6 +370,7 @@ func getLastPathElement(path string) string {
 	return filepath.Base(dir)
 }
 
+// moveFile moves a file from source to destination using copy/remove
 func moveFile(source, destination string) error {
 	err := copyFile(source, destination)
 	if err != nil {

@@ -30,7 +30,18 @@ func runTask(target, command, taskName string) error {
 	return nil
 }
 
+func stopTask(target, taskName string) {
+	stopCmd := exec.Command("schtasks.exe", "/End", "/TN", taskName, "/S", target)
+	_, stopErr := stopCmd.CombinedOutput()
+	if stopErr != nil {
+		return
+	}
+	return
+}
+
 func deleteTask(target, taskName string) error {
+	// Attempt to stop before deleting
+	stopTask(target, taskName)
 	deleteCmd := exec.Command("schtasks.exe", "/Delete", "/TN", taskName, "/F", "/S", target)
 	_, deleteErr := deleteCmd.CombinedOutput()
 	if deleteErr != nil {

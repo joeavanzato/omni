@@ -46,17 +46,18 @@ var (
 	config = Config{}
 
 	// Arguments
-	configFile = flag.String("config", "config.yaml", "path to config file")
-	execMethod = flag.String("method", "schtasks", "execution method (wmi, schtasks, sc)")
-	targets    = flag.String("targets", "all", "comma-separated list of targets OR file-path to line-delimited targets - if not specified, will query for all enabled computer devices")
-	workers    = flag.Int("workers", 250, "number of concurrent workers to use")
-	timeout    = flag.Int("timeout", 15, "timeout in minutes for each worker to complete")
-	aggregate  = flag.Bool("aggregate", false, "skip everything except aggregation - in the case where the script has already been run and you just want to aggregate the results")
-	nodownload = flag.Bool("nodownload", false, "skip downloading missing files contained inside 'commands' section of the config file")
-	prep       = flag.Bool("prepare", false, "executes commands on localhost listed in the 'prepare' section of the config file")
-	tags       = flag.String("tags", "*", "comma-separated list of tags to filter the config file by - if not specified, all commands will be executed")
-	daysBack   = flag.Int("daysback", 7, "number of days to go back for commands that contain $DAYSBACK$ string")
-	ids        = flag.String("ids", "*", "comma-separated list of command IDs to execute")
+	configFile  = flag.String("config", "configs\\config.yaml", "path to config file")
+	execMethod  = flag.String("method", "schtasks", "execution method (wmi, schtasks, sc)")
+	targets     = flag.String("targets", "all", "comma-separated list of targets OR file-path to line-delimited targets - if not specified, will query for all enabled computer devices")
+	workers     = flag.Int("workers", 250, "number of concurrent workers to use")
+	timeout     = flag.Int("timeout", 15, "timeout in minutes for each worker to complete")
+	aggregate   = flag.Bool("aggregate", false, "skip everything except aggregation - in the case where the script has already been run and you just want to aggregate the results")
+	nodownload  = flag.Bool("nodownload", false, "skip downloading missing files contained inside 'commands' section of the config file")
+	prep        = flag.Bool("prepare", false, "executes commands on localhost listed in the 'prepare' section of the config file")
+	tags        = flag.String("tags", "*", "comma-separated list of tags to filter the config file by - if not specified, all commands will be executed")
+	daysBack    = flag.Int("daysback", 7, "number of days to go back for commands that contain $DAYSBACK$ string")
+	ids         = flag.String("ids", "*", "comma-separated list of command IDs to execute")
+	skipconfirm = flag.Bool("skipconfirm", false, "skip confirmation prompt before executing commands")
 
 	// Internal
 	currentTime       = time.Now().Format("15_04_05")
@@ -141,7 +142,7 @@ func main() {
 	log.Printf("Workers: %d", *workers)
 	log.Printf("Building Batch Script...\n")
 
-	batScript, err := buildBatchScript(config, *nodownload, tmpTags, *daysBack, *ids)
+	batScript, err := buildBatchScript(config, *nodownload, tmpTags, *daysBack, *ids, *skipconfirm)
 	if err != nil {
 		log.Fatalf("Error building batch script: %v", err)
 	}

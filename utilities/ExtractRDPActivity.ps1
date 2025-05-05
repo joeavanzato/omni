@@ -290,9 +290,11 @@ function Export-ToCSV {
     }
 
     try {
-        $Data | Select-Object PSComputerName, TimeCreated, EventID, LogName, MachineName, Username, SourceIP, SourceHostname, SessionID, EventType, Status, AdditionalInfo |
-                Sort-Object TimeCreated |
-                Export-Csv -Path $FilePath -NoTypeInformation -Encoding UTF8
+        if ($Data.Count -ne 0) {
+            $Data | Select-Object PSComputerName, TimeCreated, EventID, LogName, MachineName, Username, SourceIP, SourceHostname, SessionID, EventType, Status, AdditionalInfo |
+                    Sort-Object TimeCreated |
+                    Export-Csv -Path $FilePath -NoTypeInformation -Encoding UTF8
+        }
     }
     catch {
         Write-Host "Error exporting data to CSV: $_"

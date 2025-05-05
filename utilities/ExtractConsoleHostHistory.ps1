@@ -30,6 +30,9 @@ try {
             }
         }
     }
+    if ($Results.Count -eq 0) {
+        Write-Host "No console host history found."
+    }
     $Results | Export-Csv -Path $OutputFile -NoTypeInformation
     
 } catch {

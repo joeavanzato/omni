@@ -162,6 +162,10 @@ try {
     }
     
     $Results = $Results | Sort-Object -Property TimeCreated -Descending
+    if ($Results.Count -eq 0) {
+        Write-Warning "No Script Block Logging events were found for the specified time period."
+        return
+    }
     
     try {
         $Results | Export-Csv -Path $OutputFile -NoTypeInformation -Encoding UTF8 -ErrorAction Stop

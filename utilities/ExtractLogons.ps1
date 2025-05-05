@@ -58,7 +58,10 @@ try {
             Status = "Success"
         }
     }
-    
+    if ($LogonEvents.Count -eq 0) {
+        Write-Warning "No logon events found for the specified criteria."
+        return
+    }
     $LogonEvents | Export-Csv -Path $OutputFile -NoTypeInformation
     
 } catch {

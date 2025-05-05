@@ -11,6 +11,7 @@ import (
 	"time"
 )
 
+// ComputerReport is used to produce an output CSV on which hosts were reachable, etc
 type ComputerReport struct {
 	PSComputerName    string
 	FilesCopied       bool
@@ -19,6 +20,7 @@ type ComputerReport struct {
 	ResultsCollected  bool
 }
 
+// SafeCounter helper type for concurrent counter
 type SafeCounter struct {
 	value int64
 	mutex sync.Mutex
@@ -38,6 +40,7 @@ func (c *SafeCounter) Get() int64 {
 	return atomic.LoadInt64(&c.value)
 }
 
+// startWorkers starts the worker goroutines to process the targets as well as monitoring progress and generating a final report
 func startWorkers(batchFile string, targets []string, workers int, timeout int, execMethod string) {
 	batchBytes, err := os.ReadFile(batchFile)
 	if err != nil {
@@ -96,6 +99,7 @@ func startWorkers(batchFile string, targets []string, workers int, timeout int, 
 
 }
 
+// workerLoop is the main function that runs in each worker goroutine for processing targets and collecting output
 func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, reportChan chan ComputerReport, timeout int, counter *SafeCounter, totalTargets int, execMethod string) {
 	defer wg.Done()
 	for {
@@ -144,7 +148,7 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 		for _, v := range filesToCopy {
 			targetPath := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, filepath.Base(v))
 			// Copy v to targetPath
-			err := copyFile(v, targetPath)
+			err = copyFile(v, targetPath)
 			if err != nil {
 				log.Printf("Error copying file %s to %s: %v", v, targetPath, err)
 				badError = true
@@ -160,7 +164,7 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 		// Deploy required directories
 		for _, v := range dirsToCopy {
 			targetPath := fmt.Sprintf("\\\\%s\\C$\\Windows\\temp\\%s", target, v)
-			err := copyDirectory(v, targetPath)
+			err = copyDirectory(v, targetPath)
 			if err != nil {
 				log.Printf("Error copying directory %s to %s: %v", v, targetPath, err)
 				continue
@@ -250,7 +254,6 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 				// START COLLECTION
 				// We want to at least try to collect what's present, even if it's not 100% complete
 				_, err = os.Stat(tempSignalFile)
-				computerReport.SignalFileSuccess = true
 				if err == nil {
 					computerReport.SignalFileSuccess = true
 				}
@@ -295,6 +298,9 @@ func workerLoop(batchBytes []byte, workerChan chan string, wg *sync.WaitGroup, r
 				cancel()
 				break
 			default:
+				// Check every 5 seconds to see if the script has completed on the target
+				// If yes, cancel context so that we can start cleanup and collection
+				// Timesout after set period of time, default 15 minutes
 				time.Sleep(5 * time.Second)
 				_, err = os.Stat(tempSignalFile)
 				if err == nil {

@@ -6,7 +6,7 @@
 
 ### What is it?
 
-- An open-source, modular, extensible utility for collecting evidence from on-prem Windows computers via commands, scripts and files to enhance the efficiency of Incident Responders
+- An open-source, modular, extensible utility for orchestrating evidence collection from on-prem Windows computers via remote deployment and execution of commands, scripts and tools to enhance the efficiency of Incident Responders
 
 omni helps incident responders rapidly aggregate information from domain-joined devices across an enterprise network.
 
@@ -20,6 +20,7 @@ It works by dynamically building a batch file that is deployed to targets along 
 
 omni can receive a list of targets at the command-line, via a line-delimited file or can dynamically query Active Directory for all enabled computer accounts to use as response targets.
 
+Warning - it is easy to accidentally collect **a lot** of data - be mindful of this when building your configuration file - omni will collect everything specified in the config.yaml file for each target - if you have 1000 devices and each device produces 5 megabytes of data following execution, you will be collecting 5 gigabytes of data, etc.
 
 <p align="center">
   <img src="images/2.png">
@@ -28,8 +29,8 @@ omni can receive a list of targets at the command-line, via a line-delimited fil
 ### Example Usage
 ```
 omni.exe -tags builtin
-- Launch omni with all targets from .\config.yaml having tag 'builtin' and default timeout 
-(15)/worker (250) settings using Scheduled Tasks for execution quering AD for enabled computers to use as targets
+- Launch omni with all targets from .\config.yaml having tag 'builtin' with default timeout 
+(15) and worker (250) settings, using Scheduled Tasks for execution and quering AD for enabled computers to use as targets
 
 omni.exe -workers 500 -timeout 30 -tags quick,process
 - Add more workers, increase the timeout duration per-target and only use configurations with the specified tags
@@ -224,3 +225,9 @@ This will result in running KAPE with the specified arguments, copying the resul
 Tools have dependencies - for example, you can download 3 different versions of most EZTools like PECmd - targeting .NET 4, 6 and 9 respectively - in most situations, investigators first collect raw evidence then have a standardized processing setup where the data can be parsed.
 
 If we really wanted to, we could copy all 3 versions of an EZTool to the target, write a PowerShell script that determines which version of .NET exists then execute the appropriate version.  We could also just write a command that ZIPs up all Prefetch files on the target and brings them back to our machine for analysis.  Or deploy KAPE as discussed above to do this for us.
+
+### File Sizes
+
+Keep in mind - every configuration executed means more data to collect from a target host - if we target 1000 devices and each devices produces 5 megabytes, we have 5 gigabytes to pickup - not a massive number but this can easily grow exponentially if we execute a configuration that produces a large amount of data.  
+
+This is something to consider when you are building a configuration file that meets your needs and requirements - remove those that are unnecessary for your usecase to reduce overall data volume.

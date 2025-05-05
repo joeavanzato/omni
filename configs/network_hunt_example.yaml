@@ -1,0 +1,7 @@
+commands:
+    # Hunt for connections to/from a specific IP address or for connections containing a specific remote port
+  - command: powershell.exe -Command "Get-WmiObject -Namespace 'root\StandardCimv2' -Class 'MSFT_NetTCPConnection' -Locale MS_409 -ErrorAction SilentlyContinue | Where-Object {($_.LocalAddress -eq '8.8.8.8' -or $_.RemoteAddress -eq '8.8.8.8') -or @(443,21) -contains $_.RemotePort}  | Select PSComputerName,AggregationBehavior,AppliedSetting,AvailableRequestedStates,Caption,CommunicationStatus,CreationTime,Description,DetailedStatus,Directionality,ElementName,EnabledDefault,EnabledState,HealthState,InstallDate,InstanceID,LocalAddress,LocalPort,Name,OffloadState,OperatingStatus,OperationalStatus,OwningProcess,PrimaryStatus,RemoteAddress,RemotePort,RequestedState,State,Status,TimeOfLastStateChange,TransitioningToState | Export-Csv -Path '$FILENAME$' -NoTypeInformation"
+    file_name: $time$_tcp_connections.csv
+    merge: csv
+    id: tcp_connections
+    tags: [quick, network, tcp_connections, builtin]

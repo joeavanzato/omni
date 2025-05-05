@@ -1,0 +1,21 @@
+# Example configuration file designed to assist in hunting for a specific binary across endpoints
+# Modify this to suit your needs when looking for specific indicators
+commands:
+  # Find process with command line containing 'chrome'
+  - command: powershell.exe -Command "Get-WmiObject -Class Win32_Process -Locale MS_409 -ErrorAction SilentlyContinue | Where-Object {$_.CommandLine -like '*chrome*'} | Select-Object PSComputerName,ProcessName,Handles,Path,Caption,CommandLine,CreationDate,Description,ExecutablePath,ExecutionState,Handle,InstallDate,Name,OSName,ProcessId,ParentProcessId,Priority,SessionId,Status,TerminationDate | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
+    file_name: $time$_processes.csv
+    merge: csv
+    id: processes
+    tags: [quick, process, processes, builtin]
+  # Find services with name containing 'chrome'
+  - command: powershell.exe -Command "Get-WmiObject -Class Win32_Service -Locale MS_409 -ErrorAction SilentlyContinue | Where-Object {$_.Name -like '*chrome*' -or $_.DisplayName -like '*chrome*' -or $_.PathName -like '*chrome*'} | Select-Object PSComputerName,Name,DisplayName,PathName,ServiceType,State,Status,StartMode,StartName,CreationDate | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
+    file_name: $time$_services.csv
+    merge: csv
+    id: services
+    tags: [quick, service, services, builtin]
+  # Find scheduled tasks with name containing 'chrome'
+  - command: powershell.exe -Command "Get-ScheduledTask | Where-Object {$_.TaskName -like '*chrome*' -or $_.Actions -like '*chrome*'} | Select-Object TaskName,TaskPath,State,Actions,Triggers,LastRunTime,NextRunTime | Export-Csv -NoTypeInformation -Path '$FILENAME$'"
+    file_name: $time$_tasks.csv
+    merge: csv
+    id: tasks
+    tags: [quick, task, tasks, builtin]

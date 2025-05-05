@@ -40,6 +40,7 @@ Consider the following questions - if you answer 'yes' to any of these, omni can
 ```
 omni.exe
 - Launch omni using configs\config.yaml - a light-weight set of hunting data including processes, connections, services, tasks, etc
+- This default will be 'good enough' to start off for most - if you need more data, check configs\verbose.yaml for additional ideas
 
 omni.exe -ids processes,services,products,wmi_startups,tcp_connections,scheduled_tasks,smbsessions
 - Launch omni and target a core set of light-weight data

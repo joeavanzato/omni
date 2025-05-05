@@ -8,9 +8,9 @@
 
 - An open-source, modular, extensible utility for orchestrating evidence collection from on-prem Windows computers via remote deployment and execution of commands, scripts and tools to enhance the efficiency of Incident Responders
 
-omni helps incident responders rapidly aggregate information from domain-joined devices across an enterprise network.
+**omni** helps incident responders **rapidly aggregate information** from domain-joined devices across an enterprise network.
 
-The main focus is on collecting light-weight datasets as quickly as possible to help responders identify anomalies and quickly hunt known-bad indicators across a network - but technically it is possible to execute and collect any type of evidence using any type of host-based tooling.
+The main focus is on **collecting light-weight datasets as quickly as possible** to help responders identify anomalies and quickly hunt known-bad indicators across a network - but technically it is possible to execute and collect any type of evidence using any type of host-based tooling.
 
 If you find yourself in a situation where you need to pivot on indicators of compromise (IPs, Filenames, Processes, User Activity, Service/Task Names, etc) in a cyber-immature network (lack of EDR, SIEM, Logging, etc), omni can help you get answers.
 
@@ -26,22 +26,34 @@ Warning - it is easy to accidentally collect **a lot** of data - be mindful of t
   <img src="images/2.png">
 </p>
 
+### When would I need this?
+
+Consider the following questions - if you answer 'yes' to any of these, omni can help you.
+
+* Do you have a need to execute and collect the results of one or more commands/scripts/tools on multiple devices concurrently?
+* Do you need to collect data from a large amount of devices that are not connected to the internet?
+* Have you ever run into issues trying to rapidly pivot on indicators of compromise across a large number of devices?
+* Does the current environment lack a centralized logging solution or EDR that can help you quickly query devices?
+* Do you need to execute a series of triage scripts on 1 or more networked devices?
+
 ### Example Usage
 ```
 omni.exe -tags builtin
 - Launch omni with all targets from .\config.yaml having tag 'builtin' with default timeout 
-(15) and worker (250) settings, using Scheduled Tasks for execution and quering AD for enabled computers to use as targets
+(15) and worker (250) settings, using Scheduled Tasks for execution and querying AD for enabled computers to use as targets
 
 omni.exe -workers 500 -timeout 30 -tags quick,process
 - Add more workers, increase the timeout duration per-target and only use configurations with the specified tags
 
 omni.exe -targets hostname1,hostname2,hostname3
 omni.exe -targets targets.txt
-- Use the specified computer targets
+- Use the specified computer targets from command-line or file
 
-omni.exe -method task
-- Deploy omni using Scheduled Tasks instead of WMI for remote execution
+omni.exe -method wmi
+- Deploy omni using WMI instead of Scheduled Tasks for remote execution
 
+omni.exe -config configs\test.yaml
+- Execute a specific named configuration file
 ```
 
 ### Configuration File
@@ -201,11 +213,12 @@ This will insert a column named 'PSComputerName' that will reflect the name of t
 
 omni is designed to be flexible - as such, it is more than feasible to run any type of host-based tool at scale - for example, KAPE - we could setup a command processor that drops KAPE on our targets, executes and then collects the resulting ZIPs like below:
 ```yaml
-command: dir=KAPE | C:\windows\temp\kape\kape.exe --tsource C --tdest C:\Windows\temp\kape\machine\ --tflush --target !SANS_Triage --zip kape && powershell.exe -Command "$kapezip = Get-ChildItem -Path C:\Windows\temp\kape\machine\*.zip; Rename-Item -Path $kapezip.FullName -NewName '$FILENAME$'"
+command: C:\windows\temp\kape\kape.exe --tsource C --tdest C:\Windows\temp\kape\machine\ --tflush --target !SANS_Triage --zip kape && powershell.exe -Command "$kapezip = Get-ChildItem -Path C:\Windows\temp\kape\machine\*.zip; Rename-Item -Path $kapezip.FullName -NewName '$FILENAME$'"
 file_name: $time$_kape.zip
 merge: pool
 id: kape
 add_hostname: True
+dependencies: [KAPE]
 ```
 
 This will result in running KAPE with the specified arguments, copying the resulting ZIP back to our device folder and then renaming it with the detected hostname and moving all output ZIPs into our 'aggregated' directory once all collections are completed.
@@ -213,12 +226,16 @@ This will result in running KAPE with the specified arguments, copying the resul
 ### Merge Types
 * csv
   * Merges all CSV files having the same suffix into a single CSV file - this is most appropriate if your command/tool outputs to a CSV
+  * Expects the CSVs to have the same headers - will skip files that do not match the first one inspected
   * add_hostname will insert a column at the beginning of the CSV with the detected device name based on the parent directory
 * none
   * Do not do any type of merging on collected files - they will remain in their per-device directories
 * pool
   * Collect files that match the suffix and move them into the 'aggregated' directory
   * add_hostname will add a prefix to the filename with the detected device name based on the parent directory
+  * This will remove the original file from it's original location inside 'devices'
+* asym_csv
+  * Used for merging CSV files with different headers - slightly slower than a normal CSV merge, but interchangeable
 
 ### Other Topics
 

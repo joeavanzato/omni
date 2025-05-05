@@ -30,6 +30,7 @@ foreach ($col in $standardColumns) {
     [void]$allHeaders.Add($col)
 }
 
+# TODO - Only read first row instead of importing entire file
 Write-Host "Collecting headers from all files..."
 foreach ($file in $csvFiles) {
     try {

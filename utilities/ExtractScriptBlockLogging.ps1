@@ -162,31 +162,9 @@ try {
     }
     
     $Results = $Results | Sort-Object -Property TimeCreated -Descending
-    if ($Results.Count -eq 0) {
-        Write-Warning "No Script Block Logging events were found for the specified time period."
-        return
-    }
-    
-    try {
-        $Results | Export-Csv -Path $OutputFile -NoTypeInformation -ErrorAction Stop
-    }
-    catch {
-        Write-Warning "Standard CSV export failed, trying alternative method."
-        $Header = ($Results[0].PSObject.Properties.Name -join ',')
-        $Output = @()
-        $Output += $Header
-        
-        foreach ($Row in $Results) {
-            $Line = @()
-            foreach ($Property in $Row.PSObject.Properties) {
-                # Quote and escape each value
-                $Value = if ($null -eq $Property.Value) { '""' } else { '"' + ($Property.Value -replace '"', '""') + '"' }
-                $Line += $Value
-            }
-            $Output += ($Line -join ',')
-        }
-        
-        $Output | Out-File -FilePath $OutputFile -Encoding utf8 -Force
+
+    if ($Results.Count -ne 0) {
+        $Results | Select-Object * | Export-Csv -Path $OutputFile -NoTypeInformation
     }
 }
 catch {

@@ -198,3 +198,10 @@ commands:
     id: ScriptBlockLogging
     tags: [access, powershell, builtin]
     dependencies: [utilities\ExtractScriptBlockLogging.ps1]
+  # Extract Named Pipes, Owning Processes and Established Connections
+  - command: powershell.exe C:\Windows\temp\ExtractNamedPipes.ps1 -OutputFile $FILENAME$
+    file_name: $time$_NamedPipes.csv
+    merge: csv
+    id: NamedPipes
+    tags: [access, pipes, builtin]
+    dependencies: [utilities\ExtractNamedPipes.ps1]

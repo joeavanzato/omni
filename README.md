@@ -14,13 +14,13 @@ The main focus is on **collecting light-weight datasets as quickly as possible**
 
 If you find yourself in a situation where you need to pivot on indicators of compromise (IPs, Filenames, Processes, User Activity, Service/Task Names, etc) in a cyber-immature network (lack of EDR, SIEM, Logging, etc), omni can help you get answers.
 
-It is easy to collect new data by modifying config.yaml on the fly to run scripts, commands or tools on remote devices.
+It is easy to collect new data by modifying input configurations on the fly to run any type of scripts, commands or tools on remote devices.
 
-It works by dynamically building a batch file that is deployed to targets along with any specified files and directories - this batch file controls execution and is remotely executed via schtasks by default - output files are then retrieved via SMB and deployed artifacts are cleaned-up from each target.
+It works by dynamically building a batch file that is deployed to targets along with any specified dependencies - this batch file controls execution and is remotely executed via schtasks by default - output files are then retrieved via SMB and deployed artifacts are cleaned-up from each target.
 
-omni can receive a list of targets at the command-line, via a line-delimited file or can dynamically query Active Directory for all enabled computer accounts to use as response targets.
+omni can receive a list of targets at the command-line, via a line-delimited file, or can dynamically query Active Directory for all enabled computer accounts to use as response targets for broad hunting.
 
-Warning - it is easy to accidentally collect **a lot** of data - be mindful of this when building your configuration file - omni will collect everything specified in the config.yaml file for each target - if you have 1000 devices and each device produces 5 megabytes of data following execution, you will be collecting 5 gigabytes of data, etc.
+Warning - it is easy to accidentally collect **a lot** of data - be mindful of this when building your configuration file - omni will collect everything specified in the configuration file for each target - if you have 1000 devices and each device produces 5 megabytes of data following execution, you will be collecting 5 gigabytes of data, etc.
 
 <p align="center">
   <img src="images/2.png">
